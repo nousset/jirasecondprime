@@ -31,16 +31,9 @@
           "height": 24,
           "url": "/static/brain.svg"
         },
-        "content": {
-          "type": "url",
-          "url": "/test-generator"
-        },
         "target": {
-          "type": "dialog",
-          "options": {
-            "size": "medium",
-            "chrome": true
-          }
+          "type": "issueglance",
+          "url": "/test-generator"
         },
         "conditions": [
           {
