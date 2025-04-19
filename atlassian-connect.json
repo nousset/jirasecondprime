@@ -4,16 +4,21 @@
   "description": "Générateur de tests automatique pour vos user stories",
   "vendor": {
     "name": "QalilabAi",
-    "url": "https://votre-url.com"
+    "url": "https://jirasecondprime.onrender.com"
   },
   "baseUrl": "https://jirasecondprime.onrender.com",
   "authentication": {
     "type": "jwt"
   },
+  "apiVersion": 1,
   "lifecycle": {
     "installed": "/installed",
     "uninstalled": "/uninstalled"
   },
+  "scopes": [
+    "read",
+    "write"
+  ],
   "modules": {
     "jiraIssueGlances": [
       {
@@ -31,9 +36,7 @@
           "url": "/test-generator"
         },
         "target": {
-          "type": "issueglance"
-        },
-        "dialog": {
+          "type": "dialog",
           "options": {
             "size": "medium",
             "chrome": true
@@ -77,7 +80,7 @@
           "size": "medium",
           "chrome": true
         },
-        "url": "/index.html"
+        "url": "/test-generator"
       }
     ]
   }
