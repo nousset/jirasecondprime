@@ -1,107 +1,73 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <base href="/" />
   <title>Générateur de Tests</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aui/9.4.0/aui/aui-prototyping.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aui/9.4.0/aui/aui-prototyping.min.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/aui/9.4.0/aui/aui-prototyping.min.js"></script>
   <script src="https://connect-cdn.atl-paas.net/all.js" onerror="handleAtlassianSDKError()"></script>
   <style>
-    body { padding: 20px; }
+    body { padding: 20px; font-family: Arial, sans-serif; }
     .hidden { display: none; }
     .loading { text-align: center; padding: 20px; }
     .format-selector { margin-bottom: 20px; }
-    .test-results { 
-      background-color: #f4f5f7; 
-      border-radius: 3px;
-      padding: 16px;
-      white-space: pre-wrap;
-      margin-top: 20px;
-    }
-    .spinner {
-      border: 4px solid rgba(0, 0, 0, 0.1);
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      border-left-color: #0052CC;
-      animation: spin 1s linear infinite;
-      margin: 20px auto;
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    #standalone-mode {
-      margin-bottom: 20px;
-      padding: 15px;
-      background-color: #FFFAE6;
-      border-radius: 3px;
-      border-left: 4px solid #FFAB00;
-    }
-    textarea {
-      width: 100%;
-      min-height: 150px;
-      margin-bottom: 15px;
-      font-family: monospace;
-    }
+    .test-results { background-color: #f4f5f7; border-radius: 3px; padding: 16px; white-space: pre-wrap; margin-top: 20px; }
+    .spinner { border: 4px solid rgba(0, 0, 0, 0.1); width: 36px; height: 36px; border-radius: 50%; border-left-color: #0052CC; animation: spin 1s linear infinite; margin: 20px auto; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    #standalone-mode { margin-bottom: 20px; padding: 15px; background-color: #FFFAE6; border-radius: 3px; border-left: 4px solid #FFAB00; }
+    textarea { width: 100%; min-height: 150px; margin-bottom: 15px; font-family: monospace; }
   </style>
 </head>
 <body>
   <section id="content" class="ac-content">
     <h2>Générateur de Tests IA</h2>
-    
-    <!-- Mode standalone pour utilisation hors Atlassian -->
+
     <div id="standalone-mode" class="hidden">
       <h3>Mode autonome</h3>
-      <p>Entrez votre user story ci-dessous pour générer des tests:</p>
-      <textarea id="standalone-story" placeholder="Entrez votre user story ou description ici...">En tant qu'utilisateur, je souhaite pouvoir me connecter à l'application afin d'accéder à mes données personnelles.</textarea>
+      <textarea id="standalone-story">En tant qu'utilisateur, je souhaite pouvoir me connecter à l'application afin d'accéder à mes données personnelles.</textarea>
     </div>
-    
+
     <div id="story-content" class="hidden">
       <div class="aui-message aui-message-info">
-        <p class="title">
-          <strong>User story à analyser:</strong>
-        </p>
+        <p class="title"><strong>User story à analyser:</strong></p>
         <p id="story-text"></p>
       </div>
-      
+
       <div class="format-selector">
         <form class="aui">
           <div class="radio">
-            <input class="radio" type="radio" name="format" id="gherkin" value="gherkin" checked>
+            <input type="radio" name="format" id="gherkin" value="gherkin" checked />
             <label for="gherkin">Format Gherkin (Given/When/Then)</label>
           </div>
           <div class="radio">
-            <input class="radio" type="radio" name="format" id="detailed" value="detailed">
+            <input type="radio" name="format" id="detailed" value="detailed" />
             <label for="detailed">Format détaillé (Étapes/Résultats attendus)</label>
           </div>
         </form>
       </div>
-      
+
       <button id="generate-btn" class="aui-button aui-button-primary">Générer les tests</button>
     </div>
-    
+
     <div id="loading" class="loading hidden">
       <div class="spinner"></div>
       <p>Génération des tests en cours...</p>
     </div>
-    
+
     <div id="result-section" class="hidden">
       <h3>Tests générés:</h3>
       <div id="test-results" class="test-results"></div>
-      
       <div style="margin-top: 20px;">
         <button id="copy-btn" class="aui-button">Copier</button>
         <button id="insert-btn" class="aui-button aui-button-primary">Ajouter à l'issue/page</button>
       </div>
     </div>
-    
+
     <div id="error-message" class="hidden">
       <div class="aui-message aui-message-error">
-        <p class="title">
-          <strong>Erreur</strong>
-        </p>
+        <p class="title"><strong>Erreur</strong></p>
         <p id="error-text"></p>
       </div>
     </div>
@@ -110,22 +76,19 @@
   <script>
     let contextData = {};
     let isStandaloneMode = false;
-    
-    // Gérer l'erreur si l'API Atlassian n'est pas disponible
+
     function handleAtlassianSDKError() {
       console.log("SDK Atlassian non disponible - activation du mode autonome");
       enableStandaloneMode();
     }
-    
-    // Activer le mode autonome pour utilisation hors Atlassian
+
     function enableStandaloneMode() {
       isStandaloneMode = true;
       document.getElementById('standalone-mode').classList.remove('hidden');
       document.getElementById('story-content').classList.remove('hidden');
       document.getElementById('insert-btn').classList.add('hidden');
     }
-    
-    // Tentative d'initialisation avec Atlassian Connect
+
     function initializeAtlassianMode() {
       try {
         if (typeof AP !== 'undefined') {
@@ -155,66 +118,26 @@
         enableStandaloneMode();
       }
     }
-    
-    // Fonction pour simuler la génération de tests (pour démo/autonome)
+
     function simulateTestGeneration(storyText, format) {
       return new Promise((resolve) => {
         setTimeout(() => {
-          let result;
-          
+          let result = "";
           if (format === 'gherkin') {
-            result = `Feature: ${storyText.split('\n')[0].substring(0, 50)}
-            
-Scenario: Connexion réussie
-  Given l'utilisateur est sur la page de connexion
-  When l'utilisateur entre des identifiants valides
-  And l'utilisateur clique sur le bouton de connexion
-  Then l'utilisateur est redirigé vers son tableau de bord
-  And les données personnelles de l'utilisateur sont affichées
-
-Scenario: Connexion avec identifiants incorrects
-  Given l'utilisateur est sur la page de connexion
-  When l'utilisateur entre des identifiants invalides
-  And l'utilisateur clique sur le bouton de connexion
-  Then un message d'erreur s'affiche
-  And l'utilisateur reste sur la page de connexion`;
+            result = `Feature: Connexion\n\nScenario: Connexion réussie\n  Given l'utilisateur est sur la page de connexion\n  When l'utilisateur entre des identifiants valides\n  Then l'utilisateur accède à son tableau de bord`;
           } else {
-            result = `Test Case 1: Connexion réussie
-Étapes:
-1. Naviguer vers la page de connexion
-2. Entrer un nom d'utilisateur valide
-3. Entrer un mot de passe valide
-4. Cliquer sur le bouton "Se connecter"
-
-Résultats attendus:
-1. L'utilisateur est authentifié avec succès
-2. L'utilisateur est redirigé vers son tableau de bord
-3. Les données personnelles de l'utilisateur sont visibles
-
-Test Case 2: Connexion avec identifiants incorrects
-Étapes:
-1. Naviguer vers la page de connexion
-2. Entrer un nom d'utilisateur invalide ou un mot de passe incorrect
-3. Cliquer sur le bouton "Se connecter"
-
-Résultats attendus:
-1. Un message d'erreur est affiché
-2. L'utilisateur reste sur la page de connexion`;
+            result = `Test Case 1:\nÉtapes:\n1. Aller sur la page de connexion\n2. Entrer identifiants valides\nRésultat attendu:\n- Connexion réussie`;
           }
-          
           resolve(result);
         }, 1500);
       });
     }
-    
-    // Lancement de l'initialisation
-    window.addEventListener('load', function() {
-      // Vérifier si le SDK Atlassian est chargé
+
+    document.addEventListener('DOMContentLoaded', () => {
       if (typeof AP !== 'undefined') {
         initializeAtlassianMode();
       } else {
-        // Attendre un peu au cas où le SDK est en cours de chargement
-        setTimeout(function() {
+        setTimeout(() => {
           if (typeof AP !== 'undefined') {
             initializeAtlassianMode();
           } else {
@@ -222,147 +145,46 @@ Résultats attendus:
           }
         }, 1000);
       }
-    });
-    
-    // Gestionnaire d'événements pour le bouton de génération
-    document.getElementById('generate-btn').addEventListener('click', function() {
-      const storyText = isStandaloneMode 
-        ? document.getElementById('standalone-story').value 
-        : document.getElementById('story-text').textContent;
-      
-      const formatChoice = document.querySelector('input[name="format"]:checked').value;
-      
-      document.getElementById('story-content').classList.add('hidden');
-      document.getElementById('standalone-mode').classList.add('hidden');
-      document.getElementById('loading').classList.remove('hidden');
-      document.getElementById('result-section').classList.add('hidden');
-      
-      // En mode standalone, simuler l'appel API
-      if (isStandaloneMode) {
-        simulateTestGeneration(storyText, formatChoice)
-          .then(result => {
-            document.getElementById('loading').classList.add('hidden');
-            document.getElementById('result-section').classList.remove('hidden');
-            document.getElementById('test-results').textContent = result;
-            
-            // Réafficher la section d'input
-            document.getElementById('story-content').classList.remove('hidden');
-            document.getElementById('standalone-mode').classList.remove('hidden');
-          });
-      } else {
-        // Appel à votre API Flask
-        fetch('/api/generate', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            story: storyText,
-            format: formatChoice
-          })
-        })
-        .then(response => {
-          if (!response.ok) {
-            throw new Error('Erreur lors de l\'appel à l\'API');
-          }
-          return response.json();
-        })
-        .then(data => {
-          document.getElementById('loading').classList.add('hidden');
+
+      document.getElementById('generate-btn').addEventListener('click', async () => {
+        const storyText = isStandaloneMode
+          ? document.getElementById('standalone-story').value
+          : document.getElementById('story-text').textContent;
+        const format = document.querySelector('input[name="format"]:checked').value;
+
+        document.getElementById('story-content').classList.add('hidden');
+        document.getElementById('loading').classList.remove('hidden');
+
+        try {
+          const result = await simulateTestGeneration(storyText, format);
+          document.getElementById('test-results').textContent = result;
           document.getElementById('result-section').classList.remove('hidden');
-          document.getElementById('test-results').textContent = data.result;
-          
-          // Réafficher la section d'input
-          document.getElementById('story-content').classList.remove('hidden');
-        })
-        .catch(error => {
+        } catch (err) {
+          document.getElementById('error-message').classList.remove('hidden');
+          document.getElementById('error-text').textContent = "Erreur lors de la génération des tests.";
+        } finally {
           document.getElementById('loading').classList.add('hidden');
-          showError(error.message);
-          
-          // Réafficher la section d'input
-          document.getElementById('story-content').classList.remove('hidden');
-          if (isStandaloneMode) {
-            document.getElementById('standalone-mode').classList.remove('hidden');
-          }
-        });
-      }
+        }
+      });
+
+      document.getElementById('copy-btn').addEventListener('click', () => {
+        const text = document.getElementById('test-results').textContent;
+        navigator.clipboard.writeText(text).then(() => alert("Tests copiés !"));
+      });
+
+      document.getElementById('insert-btn').addEventListener('click', () => {
+        if (typeof AP !== 'undefined' && contextData.type === 'jira') {
+          AP.request({
+            url: `/rest/api/2/issue/${contextData.key}/comment`,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ body: document.getElementById('test-results').textContent }),
+            success: () => alert("Commentaire ajouté à l'issue !"),
+            error: () => alert("Erreur lors de l'ajout du commentaire.")
+          });
+        }
+      });
     });
-    
-    // Gestionnaire pour le bouton copier
-    document.getElementById('copy-btn').addEventListener('click', function() {
-      const testText = document.getElementById('test-results').textContent;
-      navigator.clipboard.writeText(testText)
-        .then(() => {
-          // Feedback visuel temporaire
-          this.textContent = '✓ Copié!';
-          setTimeout(() => {
-            this.textContent = 'Copier';
-          }, 2000);
-        })
-        .catch(err => {
-          showError('Impossible de copier: ' + err);
-        });
-    });
-    
-    // Gestionnaire pour le bouton d'insertion
-    document.getElementById('insert-btn').addEventListener('click', function() {
-      const testContent = document.getElementById('test-results').textContent;
-      
-      if (contextData.type === 'jira') {
-        // Ajouter un commentaire à l'issue Jira
-        AP.request({
-          url: '/rest/api/latest/issue/' + contextData.issueKey + '/comment',
-          type: 'POST',
-          contentType: 'application/json',
-          data: JSON.stringify({
-            body: "h3. Tests générés automatiquement\n\n{noformat}\n" + testContent + "\n{noformat}"
-          }),
-          success: function() {
-            AP.dialog.close();
-          },
-          error: function(xhr) {
-            showError('Erreur lors de l\'ajout du commentaire: ' + xhr.responseText);
-          }
-        });
-      } else if (contextData.type === 'confluence') {
-        // Créer une nouvelle page Confluence en tant qu'enfant
-        const pageTitle = "Tests pour " + contextData.pageTitle;
-        
-        AP.request({
-          url: '/rest/api/content',
-          type: 'POST',
-          contentType: 'application/json',
-          data: JSON.stringify({
-            type: 'page',
-            title: pageTitle,
-            space: { key: contextData.spaceKey },
-            ancestors: [{ id: contextData.pageId }],
-            body: {
-              storage: {
-                value: "<h1>Tests générés automatiquement</h1><pre><code>" + 
-                       testContent.replace(/</g, "&lt;").replace(/>/g, "&gt;") + 
-                       "</code></pre>",
-                representation: 'storage'
-              }
-            }
-          }),
-          success: function() {
-            AP.dialog.close();
-          },
-          error: function(xhr) {
-            showError('Erreur lors de la création de la page: ' + xhr.responseText);
-          }
-        });
-      }
-    });
-    
-    function showError(message) {
-      document.getElementById('error-text').textContent = message;
-      document.getElementById('error-message').classList.remove('hidden');
-      setTimeout(function() {
-        document.getElementById('error-message').classList.add('hidden');
-      }, 5000);
-    }
   </script>
 </body>
 </html>

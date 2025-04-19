@@ -1,19 +1,21 @@
 AP.register({
   'test-generator-dialog': function(dialog) {
-    // Récupère les détails de l'issue Jira ou de la page Confluence
+    // Récupère le contexte (Jira ou Confluence)
     AP.context.getContext(function(context) {
+
       if (context.jira) {
-        // Contexte Jira
+        // --- Cas Jira ---
         AP.require('request', function(request) {
+          const issueKey = context.jira.issue.key;
+
           request({
-            url: '/rest/api/latest/issue/' + context.jira.issue.key,
+            url: '/rest/api/latest/issue/' + issueKey,
+            type: 'GET',
             success: function(response) {
               const issue = JSON.parse(response);
               const description = issue.fields.description || '';
               const summary = issue.fields.summary || '';
-              const issueKey = issue.key;
-              
-              // Envoyer les données au dialogue
+
               dialog.getContentOptions().then(function(options) {
                 options.customData = {
                   type: 'jira',
@@ -21,22 +23,27 @@ AP.register({
                   summary: summary,
                   description: description
                 };
-                return options;
+                dialog.setContent(options); // 💡 Assure la mise à jour
               });
+            },
+            error: function(xhr) {
+              console.error('Erreur lors de la récupération de l’issue Jira:', xhr);
             }
           });
         });
+
       } else if (context.confluence) {
-        // Contexte Confluence
+        // --- Cas Confluence ---
+        const pageId = context.confluence.content.id;
+
         AP.request({
-          url: '/rest/api/content/' + context.confluence.content.id + '?expand=body.storage',
+          url: '/rest/api/content/' + pageId + '?expand=body.storage',
+          type: 'GET',
           success: function(response) {
             const page = JSON.parse(response);
-            const pageContent = page.body.storage.value || '';
+            const pageContent = page.body?.storage?.value || '';
             const pageTitle = page.title || '';
-            const pageId = page.id;
-            
-            // Envoyer les données au dialogue
+
             dialog.getContentOptions().then(function(options) {
               options.customData = {
                 type: 'confluence',
@@ -44,16 +51,20 @@ AP.register({
                 pageTitle: pageTitle,
                 pageContent: pageContent
               };
-              return options;
+              dialog.setContent(options); // 💡 Assure la mise à jour
             });
+          },
+          error: function(xhr) {
+            console.error('Erreur lors de la récupération de la page Confluence:', xhr);
           }
         });
       }
+
     });
   }
 });
 
-// Handler pour le bouton dans Jira
+// ✅ Fonction pour ouvrir le dialogue
 function openGenerateTestDialog() {
   AP.dialog.create({
     key: 'test-generator-dialog',
@@ -62,12 +73,6 @@ function openGenerateTestDialog() {
   });
 }
 
-// S'exécute quand le glance est cliqué
-AP.events.on('jira-issue-glance-clicked', function() {
-  openGenerateTestDialog();
-});
-
-// S'exécute quand le bouton Confluence est cliqué
-AP.events.on('confluence-content-byline-item-clicked', function() {
-  openGenerateTestDialog();
-});
+// ✅ Gestion des événements
+AP.events.on('jira-issue-glance-clicked', openGenerateTestDialog);
+AP.events.on('confluence-content-byline-item-clicked', openGenerateTestDialog);
