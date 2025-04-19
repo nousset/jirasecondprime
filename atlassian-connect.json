@@ -1,0 +1,84 @@
+{
+  "key": "test-generator-app",
+  "name": "TestGen AI",
+  "description": "Générateur de tests automatique pour vos user stories",
+  "vendor": {
+    "name": "QalilabAi",
+    "url": "https://votre-url.com"
+  },
+  "baseUrl": "https://mountains-genealogy-jennifer-rss.trycloudflare.com",
+  "authentication": {
+    "type": "jwt"
+  },
+  "lifecycle": {
+    "installed": "/installed",
+    "uninstalled": "/uninstalled"
+  },
+  "modules": {
+    "jiraIssueGlances": [
+      {
+        "key": "generate-tests-glance",
+        "name": {
+          "value": "🧠 Générer les tests"
+        },
+        "icon": {
+          "width": 24,
+          "height": 24,
+          "url": "/static/brain.svg"
+        },
+        "content": {
+          "type": "url",
+          "url": "/test-generator"
+        },
+        "target": {
+          "type": "issueglance"
+        },
+        "dialog": {
+          "options": {
+            "size": "medium",
+            "chrome": true
+          }
+        },
+        "conditions": [
+          {
+            "condition": "issue_type",
+            "params": {
+              "issueTypes": ["Story", "Task", "Bug"]
+            }
+          }
+        ]
+      }
+    ],
+    "confluenceContentBylineItems": [
+      {
+        "key": "generate-tests-confluence",
+        "name": {
+          "value": "🧠 Générer les tests"
+        },
+        "icon": {
+          "width": 24,
+          "height": 24,
+          "url": "/static/brain.svg"
+        },
+        "url": "/test-generator-confluence",
+        "target": {
+          "type": "dialog",
+          "options": {
+            "size": "medium",
+            "chrome": true
+          }
+        }
+      }
+    ],
+    "dialogs": [
+      {
+        "key": "test-generator-dialog",
+        "options": {
+          "size": "medium",
+          "chrome": true
+        },
+        "url": "/index.html"
+      }
+    ]
+  }
+}
