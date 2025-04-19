@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify, send_from_directory, render_template, redirect, url_for
+from flask import Flask, request, jsonify, send_from_directory, render_template
 from flask_cors import CORS
 import requests
 import json
@@ -84,7 +84,6 @@ def get_issue():
     if not issue_key:
         return jsonify({"error": "Clé d'issue manquante"}), 400
 
-    # Validation du client key pour l'authentification
     client_key = request.args.get("clientKey")
     if not client_key or client_key not in app_installations:
         return jsonify({"error": "Authentification requise"}), 401
@@ -92,7 +91,6 @@ def get_issue():
     installation = app_installations.get(client_key)
     base_url = installation.get("base_url")
     
-    # Utiliser l'URL de base de l'installation
     url = f"{base_url}/rest/api/3/issue/{issue_key}"
     auth = (JIRA_EMAIL, JIRA_API_TOKEN)
     headers = {"Accept": "application/json"}
@@ -100,13 +98,11 @@ def get_issue():
     try:
         logger.info(f"Récupération de l'issue Jira: {issue_key}")
         res = requests.get(url, headers=headers, auth=auth, timeout=10)
-        res.raise_for_status()  # Lève une exception pour les erreurs HTTP
+        res.raise_for_status()
         data = res.json()
         
-        # Extraction du résumé
         summary = data["fields"].get("summary", "")
         
-        # Extraction du contenu de la description
         description = ""
         if data["fields"].get("description") and data["fields"]["description"].get("content"):
             for content_item in data["fields"]["description"]["content"]:
@@ -122,8 +118,6 @@ def get_issue():
     except requests.exceptions.RequestException as e:
         logger.error(f"Erreur lors de la récupération de l'issue: {str(e)}")
         return jsonify({"error": str(e)}), 500
-
-# Routes pour Atlassian Connect
 
 @app.route("/atlassian-connect.json")
 def atlassian_connect():
@@ -160,10 +154,7 @@ def uninstalled():
 
 @app.route("/jira-test-generator", methods=["GET"])
 def jira_test_generator():
-    """Page de l'application embarquée dans Jira"""
     issue_key = request.args.get("issueKey")
-    # Vérifier l'authentification JWT ici si nécessaire
-    
     context = {
         "issue_key": issue_key,
         "page_id": None
@@ -172,10 +163,7 @@ def jira_test_generator():
 
 @app.route("/confluence-test-generator", methods=["GET"])
 def confluence_test_generator():
-    """Page de l'application embarquée dans Confluence"""
     page_id = request.args.get("pageId")
-    # Vérifier l'authentification JWT ici si nécessaire
-    
     context = {
         "issue_key": None,
         "page_id": page_id
@@ -183,7 +171,6 @@ def confluence_test_generator():
     return render_template("index.html", **context)
 
 def create_jwt_token(client_key, shared_secret, method, uri):
-    """Création d'un token JWT pour l'authentification avec Atlassian"""
     now = datetime.now()
     exp = now + timedelta(hours=1)
     
@@ -198,14 +185,11 @@ def create_jwt_token(client_key, shared_secret, method, uri):
     return jwt.encode(claims, shared_secret, algorithm="HS256")
 
 def compute_qsh(method, uri):
-    """Calcul du query string hash pour JWT"""
-    # Simplified QSH computation
     canonical_uri = uri.split("?")[0]
     return f"{method}&{canonical_uri}&"
 
 @app.route("/api/add-comment", methods=["POST"])
 def add_comment():
-    """Ajouter un commentaire à une issue Jira au nom de l'utilisateur"""
     data = request.get_json()
     issue_key = data.get("issueKey")
     comment_text = data.get("comment")
@@ -220,7 +204,6 @@ def add_comment():
     installation = app_installations[client_key]
     base_url = installation["base_url"]
     
-    # Construction du commentaire au format Atlassian Document Format
     comment_body = {
         "body": {
             "version": 1,
@@ -250,18 +233,10 @@ def add_comment():
     try:
         response = requests.post(url, json=comment_body, headers=headers, auth=auth, timeout=10)
         response.raise_for_status()
-        return jsonify({"success": True, "commentId": response.json().get("id")})
-    except Exception as e:
-        logger.error(f"Erreur lors de l'ajout du commentaire: {str(e)}")
+        return jsonify({"message": "Commentaire ajouté avec succès"}), 200
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Erreur lors de l'ajout du commentaire : {str(e)}")
         return jsonify({"error": str(e)}), 500
 
-# Middleware pour la gestion des erreurs
-@app.errorhandler(Exception)
-def handle_exception(e):
-    logger.error(f"Erreur non gérée: {str(e)}")
-    return jsonify({"error": "Une erreur inattendue s'est produite"}), 500
-
 if __name__ == "__main__":
-    port = int(os.getenv("PORT",5000))
-    debug = os.getenv("FLASK_ENV") == "development"
-    app.run(host="0.0.0.0", port=port, debug=debug)
+    app.run(debug=True)
