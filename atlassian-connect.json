@@ -51,27 +51,6 @@
         ]
       }
     ],
-    "confluenceContentBylineItems": [
-      {
-        "key": "generate-tests-confluence",
-        "name": {
-          "value": "🧠 Générer les tests"
-        },
-        "icon": {
-          "width": 24,
-          "height": 24,
-          "url": "/static/brain.svg"
-        },
-        "url": "/test-generator-confluence",
-        "target": {
-          "type": "dialog",
-          "options": {
-            "size": "medium",
-            "chrome": true
-          }
-        }
-      }
-    ],
     "dialogs": [
       {
         "key": "test-generator-dialog",
