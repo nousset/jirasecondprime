@@ -6,7 +6,7 @@
     "name": "QalilabAi",
     "url": "https://votre-url.com"
   },
-  "baseUrl": "https://mountains-genealogy-jennifer-rss.trycloudflare.com",
+  "baseUrl": "https://jirasecondprime.onrender.com",
   "authentication": {
     "type": "jwt"
   },
