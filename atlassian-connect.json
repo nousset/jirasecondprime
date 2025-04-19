@@ -38,8 +38,8 @@
           }
         },
         "target": {
-          "type": "dialogModule",
-          "key": "test-generator-dialog"
+          "type": "web_panel",
+          "url": "/test-generator"
         },
         "conditions": [
           {
