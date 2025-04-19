@@ -12,7 +12,7 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__, static_folder="public", template_folder="templates")
+app = Flask(__name__, static_folder="public", template_folder="template")
 CORS(app)
 
 # Configurations
