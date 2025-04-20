@@ -4,187 +4,436 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <base href="/" />
-  <title>Générateur de Tests</title>
+  <title>Générateur de Tests IA</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aui/9.4.0/aui/aui-prototyping.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/aui/9.4.0/aui/aui-prototyping.min.js"></script>
   <script src="https://connect-cdn.atl-paas.net/all.js" onerror="handleAtlassianSDKError()"></script>
   <style>
-    body { padding: 20px; font-family: Arial, sans-serif; }
-    .hidden { display: none; }
-    .loading { text-align: center; padding: 20px; }
-    .format-selector { margin-bottom: 20px; }
-    .test-results { background-color: #f4f5f7; border-radius: 3px; padding: 16px; white-space: pre-wrap; margin-top: 20px; }
-    .spinner { border: 4px solid rgba(0, 0, 0, 0.1); width: 36px; height: 36px; border-radius: 50%; border-left-color: #0052CC; animation: spin 1s linear infinite; margin: 20px auto; }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    #standalone-mode { margin-bottom: 20px; padding: 15px; background-color: #FFFAE6; border-radius: 3px; border-left: 4px solid #FFAB00; }
-    textarea { width: 100%; min-height: 150px; margin-bottom: 15px; font-family: monospace; }
+    :root {
+      --primary-color: #0052CC;
+      --secondary-color: #172B4D;
+      --tertiary-color: #6554C0;
+      --success-color: #36B37E;
+      --warning-color: #FFAB00;
+      --danger-color: #FF5630;
+      --light-bg: #F4F5F7;
+      --border-radius: 4px;
+      --box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      line-height: 1.6;
+      color: var(--secondary-color);
+      padding: 0;
+      margin: 0;
+      background-color: #f7f8f9;
+    }
+    
+    .app-container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    .app-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+    
+    .app-logo {
+      font-size: 1.5rem;
+      margin-right: 1rem;
+      color: var(--primary-color);
+    }
+    
+    .app-title {
+      font-size: 1.8rem;
+      font-weight: 600;
+      margin: 0;
+      color: var(--secondary-color);
+    }
+    
+    .card {
+      background-color: white;
+      border-radius: var(--border-radius);
+      box-shadow: var(--box-shadow);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--light-bg);
+    }
+    
+    .card-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin: 0;
+      color: var(--tertiary-color);
+    }
+    
+    .hidden {
+      display: none;
+    }
+    
+    .user-story {
+      background-color: var(--light-bg);
+      border-radius: var(--border-radius);
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      border-left: 4px solid var(--primary-color);
+    }
+    
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+    
+    .form-control {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #dfe1e6;
+      border-radius: var(--border-radius);
+      font-size: 1rem;
+      transition: border-color 0.2s;
+    }
+    
+    .form-control:focus {
+      border-color: var(--primary-color);
+      outline: none;
+    }
+    
+    textarea.form-control {
+      min-height: 150px;
+      font-family: monospace;
+    }
+    
+    .option-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .option-card {
+      flex: 1;
+      min-width: 180px;
+      padding: 1rem;
+      border: 1px solid #dfe1e6;
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+    
+    .option-card.selected {
+      border-color: var(--primary-color);
+      background-color: rgba(0, 82, 204, 0.05);
+    }
+    
+    .option-card-radio {
+      position: absolute;
+      opacity: 0;
+      cursor: pointer;
+    }
+    
+    .option-card-label {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+    }
+    
+    .option-icon {
+      font-size: 1.2rem;
+      margin-right: 0.75rem;
+      color: var(--primary-color);
+    }
+    
+    .option-title {
+      font-weight: 500;
+      margin: 0;
+    }
+    
+    .option-desc {
+      font-size: 0.875rem;
+      color: #6B778C;
+      margin: 0.5rem 0 0;
+    }
+    
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.6rem 1.2rem;
+      font-size: 1rem;
+      font-weight: 500;
+      border-radius: var(--border-radius);
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary {
+      background-color: var(--primary-color);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background-color: #0747A6;
+    }
+    
+    .btn-secondary {
+      background-color: white;
+      color: var(--secondary-color);
+      border: 1px solid #dfe1e6;
+    }
+    
+    .btn-secondary:hover {
+      background-color: #f4f5f7;
+    }
+    
+    .btn-success {
+      background-color: var(--success-color);
+      color: white;
+    }
+    
+    .btn-success:hover {
+      background-color: #2ea06e;
+    }
+    
+    .btn-icon {
+      margin-right: 0.5rem;
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+    }
+    
+    .loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid rgba(0, 82, 204, 0.1);
+      border-left-color: var(--primary-color);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 1rem;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .test-results {
+      background-color: var(--light-bg);
+      border-radius: var(--border-radius);
+      padding: 1.5rem;
+      white-space: pre-wrap;
+      font-family: monospace;
+      line-height: 1.5;
+      overflow-x: auto;
+      margin-bottom: 1.5rem;
+      border-left: 4px solid var(--success-color);
+    }
+    
+    .task-list {
+      margin-top: 1rem;
+    }
+    
+    .task-item {
+      display: flex;
+      align-items: center;
+      padding: 0.75rem;
+      border-radius: var(--border-radius);
+      background-color: var(--light-bg);
+      margin-bottom: 0.5rem;
+    }
+    
+    .task-icon {
+      color: var(--tertiary-color);
+      margin-right: 0.75rem;
+    }
+    
+    .alert {
+      padding: 1rem;
+      border-radius: var(--border-radius);
+      margin-bottom: 1.5rem;
+    }
+    
+    .alert-info {
+      background-color: #DEEBFF;
+      border-left: 4px solid #0747A6;
+    }
+    
+    .alert-warning {
+      background-color: #FFFAE6;
+      border-left: 4px solid var(--warning-color);
+    }
+    
+    .alert-error {
+      background-color: #FFEBE6;
+      border-left: 4px solid var(--danger-color);
+    }
+    
+    #standalone-mode {
+      padding: 1rem;
+      background-color: #FFFAE6;
+      border-radius: var(--border-radius);
+      border-left: 4px solid var(--warning-color);
+      margin-bottom: 1.5rem;
+    }
+    
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #dfe1e6;
+      margin-bottom: 1.5rem;
+    }
+    
+    .tab {
+      padding: 0.75rem 1.5rem;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    
+    .tab.active {
+      border-bottom-color: var(--primary-color);
+      color: var(--primary-color);
+    }
+    
+    /* Responsive design */
+    @media (max-width: 768px) {
+      .app-container {
+        padding: 1rem;
+      }
+      
+      .option-group {
+        flex-direction: column;
+      }
+      
+      .button-group {
+        flex-direction: column;
+      }
+      
+      .btn {
+        width: 100%;
+      }
+    }
   </style>
 </head>
 <body>
-  <section id="content" class="ac-content">
-    <h2>Générateur de Tests IA</h2>
-
+  <div class="app-container">
+    <header class="app-header">
+      <div class="app-logo"><i class="fas fa-robot"></i></div>
+      <h1 class="app-title">Générateur de Tests IA</h1>
+    </header>
+    
     <div id="standalone-mode" class="hidden">
-      <h3>Mode autonome</h3>
-      <textarea id="standalone-story">En tant qu'utilisateur, je souhaite pouvoir me connecter à l'application afin d'accéder à mes données personnelles.</textarea>
+      <div class="card-header">
+        <h2 class="card-title">Mode autonome</h2>
+      </div>
+      <div class="form-group">
+        <label for="standalone-story">User Story</label>
+        <textarea id="standalone-story" class="form-control" placeholder="Entrez votre user story ici...">En tant qu'utilisateur, je souhaite pouvoir me connecter à l'application afin d'accéder à mes données personnelles.</textarea>
+      </div>
     </div>
-
-    <div id="story-content" class="hidden">
-      <div class="aui-message aui-message-info">
-        <p class="title"><strong>User story à analyser:</strong></p>
+    
+    <section id="story-content" class="card hidden">
+      <div class="card-header">
+        <h2 class="card-title">Détails de la User Story</h2>
+      </div>
+      
+      <div class="user-story">
+        <h3>User story à analyser:</h3>
         <p id="story-text"></p>
       </div>
-
-      <div class="format-selector">
-        <form class="aui">
-          <div class="radio">
-            <input type="radio" name="format" id="gherkin" value="gherkin" checked />
-            <label for="gherkin">Format Gherkin (Given/When/Then)</label>
+      
+      <div class="form-group">
+        <h3>Format des tests</h3>
+        <div class="option-group">
+          <div class="option-card selected">
+            <input type="radio" name="format" id="gherkin" value="gherkin" checked class="option-card-radio">
+            <label for="gherkin" class="option-card-label">
+              <span class="option-icon"><i class="fas fa-list-ol"></i></span>
+              <div>
+                <h4 class="option-title">Format Gherkin</h4>
+                <p class="option-desc">Given/When/Then, idéal pour BDD</p>
+              </div>
+            </label>
           </div>
-          <div class="radio">
-            <input type="radio" name="format" id="detailed" value="detailed" />
-            <label for="detailed">Format détaillé (Étapes/Résultats attendus)</label>
+          
+          <div class="option-card">
+            <input type="radio" name="format" id="detailed" value="detailed" class="option-card-radio">
+            <label for="detailed" class="option-card-label">
+              <span class="option-icon"><i class="fas fa-tasks"></i></span>
+              <div>
+                <h4 class="option-title">Format détaillé</h4>
+                <p class="option-desc">Étapes et résultats attendus</p>
+              </div>
+            </label>
           </div>
-        </form>
+        </div>
       </div>
-
-      <button id="generate-btn" class="aui-button aui-button-primary">Générer les tests</button>
-    </div>
-
+      
+      <div class="form-group">
+        <h3>Langue de sortie</h3>
+        <div class="option-group">
+          <div class="option-card selected">
+            <input type="radio" name="language" id="french" value="french" checked class="option-card-radio">
+            <label for="french" class="option-card-label">
+              <span class="option-icon"><i class="fas fa-flag"></i></span>
+              <div>
+                <h4 class="option-title">Français</h4>
+              </div>
+            </label>
+          </div>
+          
+          <div class="option-card">
+            <input type="radio" name="language" id="english" value="english" class="option-card-radio">
+            <label for="english" class="option-card-label">
+              <span class="option-icon"><i class="fas fa-flag"></i></span>
+              <div>
+                <h4 class="option-title">Anglais</h4>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+      
+      <button id="generate-btn" class="btn btn-primary">
+        <span class="btn-icon"><i class="fas fa-brain"></i></span>
+        Générer les tests
+      </button>
+    </section>
+    
     <div id="loading" class="loading hidden">
       <div class="spinner"></div>
       <p>Génération des tests en cours...</p>
     </div>
-
-    <div id="result-section" class="hidden">
-      <h3>Tests générés:</h3>
+    
+    <section id="result-section" class="card hidden">
+      <div class="card-header">
+        <h2 class="card-title">Tests générés</h2>
+      </div>
+      
       <div id="test-results" class="test-results"></div>
-      <div style="margin-top: 20px;">
-        <button id="copy-btn" class="aui-button">Copier</button>
-        <button id="insert-btn" class="aui-button aui-button-primary">Ajouter à l'issue/page</button>
-      </div>
-    </div>
-
-    <div id="error-message" class="hidden">
-      <div class="aui-message aui-message-error">
-        <p class="title"><strong>Erreur</strong></p>
-        <p id="error-text"></p>
-      </div>
-    </div>
-  </section>
-
-  <script>
-    let contextData = {};
-    let isStandaloneMode = false;
-
-    function handleAtlassianSDKError() {
-      console.log("SDK Atlassian non disponible - activation du mode autonome");
-      enableStandaloneMode();
-    }
-
-    function enableStandaloneMode() {
-      isStandaloneMode = true;
-      document.getElementById('standalone-mode').classList.remove('hidden');
-      document.getElementById('story-content').classList.remove('hidden');
-      document.getElementById('insert-btn').classList.add('hidden');
-    }
-
-    function initializeAtlassianMode() {
-      try {
-        if (typeof AP !== 'undefined') {
-          AP.context.getContext(function(context) {
-            AP.dialog.getCustomData(function(data) {
-              if (data) {
-                contextData = data;
-                const storyElement = document.getElementById('story-text');
-                if (data.type === 'jira') {
-                  storyElement.textContent = data.summary + "\n\n" + data.description;
-                } else if (data.type === 'confluence') {
-                  const tempDiv = document.createElement('div');
-                  tempDiv.innerHTML = data.pageContent;
-                  storyElement.textContent = data.pageTitle + "\n\n" + tempDiv.textContent;
-                }
-                document.getElementById('story-content').classList.remove('hidden');
-              } else {
-                enableStandaloneMode();
-              }
-            });
-          });
-        } else {
-          enableStandaloneMode();
-        }
-      } catch (error) {
-        console.error("Erreur lors de l'initialisation du mode Atlassian:", error);
-        enableStandaloneMode();
-      }
-    }
-
-    function simulateTestGeneration(storyText, format) {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          let result = "";
-          if (format === 'gherkin') {
-            result = `Feature: Connexion\n\nScenario: Connexion réussie\n  Given l'utilisateur est sur la page de connexion\n  When l'utilisateur entre des identifiants valides\n  Then l'utilisateur accède à son tableau de bord`;
-          } else {
-            result = `Test Case 1:\nÉtapes:\n1. Aller sur la page de connexion\n2. Entrer identifiants valides\nRésultat attendu:\n- Connexion réussie`;
-          }
-          resolve(result);
-        }, 1500);
-      });
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      if (typeof AP !== 'undefined') {
-        initializeAtlassianMode();
-      } else {
-        setTimeout(() => {
-          if (typeof AP !== 'undefined') {
-            initializeAtlassianMode();
-          } else {
-            enableStandaloneMode();
-          }
-        }, 1000);
-      }
-
-      document.getElementById('generate-btn').addEventListener('click', async () => {
-        const storyText = isStandaloneMode
-          ? document.getElementById('standalone-story').value
-          : document.getElementById('story-text').textContent;
-        const format = document.querySelector('input[name="format"]:checked').value;
-
-        document.getElementById('story-content').classList.add('hidden');
-        document.getElementById('loading').classList.remove('hidden');
-
-        try {
-          const result = await simulateTestGeneration(storyText, format);
-          document.getElementById('test-results').textContent = result;
-          document.getElementById('result-section').classList.remove('hidden');
-        } catch (err) {
-          document.getElementById('error-message').classList.remove('hidden');
-          document.getElementById('error-text').textContent = "Erreur lors de la génération des tests.";
-        } finally {
-          document.getElementById('loading').classList.add('hidden');
-        }
-      });
-
-      document.getElementById('copy-btn').addEventListener('click', () => {
-        const text = document.getElementById('test-results').textContent;
-        navigator.clipboard.writeText(text).then(() => alert("Tests copiés !"));
-      });
-
-      document.getElementById('insert-btn').addEventListener('click', () => {
-        if (typeof AP !== 'undefined' && contextData.type === 'jira') {
-          AP.request({
-            url: `/rest/api/2/issue/${contextData.key}/comment`,
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({ body: document.getElementById('test-results').textContent }),
-            success: () => alert("Commentaire ajouté à l'issue !"),
-            error: () => alert("Erreur lors de l'ajout du commentaire.")
-          });
-        }
-      });
-    });
-  </script>
-</body>
-</html>
+      
+      <div class="button-group">
+        
