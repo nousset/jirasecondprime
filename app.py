@@ -12,31 +12,33 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__, static_folder="public", template_folder="template")
+app = Flask(__name__, static_folder="static", template_folder="templates")
 CORS(app)
 
 # Configurations
 JIRA_BASE_URL = os.getenv("JIRA_BASE_URL")
 JIRA_EMAIL = os.getenv("JIRA_EMAIL")
 JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN")
-JIRA_PROJECT_KEY = os.getenv("JIRA_PROJECT_KEY", "ACD")
+JIRA_PROJECT_KEY = os.getenv("JIRA_PROJECT_KEY", "TST")
 API_URL = os.getenv("LM_STUDIO_API_URL", "http://127.0.0.1:1234/v1/chat/completions")
 APP_SECRET = os.getenv("APP_SECRET", "your-secret-key")  # À définir dans les variables d'environnement
 
 # Pour stocker les installations d'applications (en production, utilisez une base de données)
 app_installations = {}
 
-def build_prompt(story_text, format_choice):
+def build_prompt(story_text, format_choice, language):
+    lang_prefix = "en français" if language == "french" else "in English"
+    
     if format_choice == "gherkin":
         return f"""Voici une user story : "{story_text}"
-En tant qu'assistant de test, génère un scénario de test au format Gherkin (Given/When/Then) en français."""
+En tant qu'assistant de test, génère un scénario de test au format Gherkin (Given/When/Then) {lang_prefix}."""
     else:
         return f"""Voici une user story : "{story_text}"
-Génère un cas de test détaillé avec les étapes et résultats attendus."""
+Génère un cas de test détaillé avec les étapes et résultats attendus {lang_prefix}."""
 
 def generate_response(prompt, max_tokens=500):
     payload = {
-        "model": "mistral-7b-instruct-v0.3",
+        "model": "mistral-7b-instruct-v0.3",  # Utilisez le modèle de votre choix
         "messages": [{"role": "user", "content": prompt}],
         "max_tokens": max_tokens,
         "temperature": 0.7
@@ -57,10 +59,6 @@ def generate_response(prompt, max_tokens=500):
 def home():
     return render_template("index.html")
 
-@app.route("/public/<path:path>")
-def serve_public(path):
-    return send_from_directory("public", path)
-
 @app.route("/static/<path:path>")
 def serve_static(path):
     return send_from_directory("static", path)
@@ -70,11 +68,12 @@ def api_generate():
     data = request.get_json()
     story = data.get("story", "").strip()
     format_choice = data.get("format", "gherkin")
+    language = data.get("language", "french")
 
     if not story:
         return jsonify({"error": "Aucune user story fournie"}), 400
 
-    prompt = build_prompt(story, format_choice)
+    prompt = build_prompt(story, format_choice, language)
     generated = generate_response(prompt)
     return jsonify({"result": generated})
 
@@ -117,6 +116,40 @@ def get_issue():
         })
     except requests.exceptions.RequestException as e:
         logger.error(f"Erreur lors de la récupération de l'issue: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/get-confluence-page")
+def get_confluence_page():
+    page_id = request.args.get("pageId")
+    if not page_id:
+        return jsonify({"error": "ID de page manquant"}), 400
+
+    client_key = request.args.get("clientKey")
+    if not client_key or client_key not in app_installations:
+        return jsonify({"error": "Authentification requise"}), 401
+
+    installation = app_installations.get(client_key)
+    base_url = installation.get("base_url")
+    
+    url = f"{base_url}/rest/api/content/{page_id}?expand=body.storage"
+    auth = (JIRA_EMAIL, JIRA_API_TOKEN)
+    headers = {"Accept": "application/json"}
+
+    try:
+        logger.info(f"Récupération de la page Confluence: {page_id}")
+        res = requests.get(url, headers=headers, auth=auth, timeout=10)
+        res.raise_for_status()
+        data = res.json()
+        
+        title = data.get("title", "")
+        content = data.get("body", {}).get("storage", {}).get("value", "")
+        
+        return jsonify({
+            "title": title,
+            "content": content
+        })
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Erreur lors de la récupération de la page: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 @app.route("/atlassian-connect.json")
@@ -170,26 +203,8 @@ def confluence_test_generator():
     }
     return render_template("index.html", **context)
 
-def create_jwt_token(client_key, shared_secret, method, uri):
-    now = datetime.now()
-    exp = now + timedelta(hours=1)
-    
-    claims = {
-        "iss": "test-generator-app",
-        "iat": int(now.timestamp()),
-        "exp": int(exp.timestamp()),
-        "qsh": compute_qsh(method, uri),
-        "sub": client_key
-    }
-    
-    return jwt.encode(claims, shared_secret, algorithm="HS256")
-
-def compute_qsh(method, uri):
-    canonical_uri = uri.split("?")[0]
-    return f"{method}&{canonical_uri}&"
-
-@app.route("/api/add-comment", methods=["POST"])
-def add_comment():
+@app.route("/api/add-jira-comment", methods=["POST"])
+def add_jira_comment():
     data = request.get_json()
     issue_key = data.get("issueKey")
     comment_text = data.get("comment")
@@ -238,5 +253,115 @@ def add_comment():
         logger.error(f"Erreur lors de l'ajout du commentaire : {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+@app.route("/api/update-confluence-page", methods=["POST"])
+def update_confluence_page():
+    data = request.get_json()
+    page_id = data.get("pageId")
+    content = data.get("content")
+    client_key = data.get("clientKey")
+    
+    if not all([page_id, content, client_key]):
+        return jsonify({"error": "Paramètres manquants"}), 400
+    
+    if client_key not in app_installations:
+        return jsonify({"error": "Installation non trouvée"}), 404
+    
+    installation = app_installations[client_key]
+    base_url = installation["base_url"]
+    
+    # D'abord, récupérer les informations actuelles de la page
+    get_url = f"{base_url}/rest/api/content/{page_id}"
+    auth = (JIRA_EMAIL, JIRA_API_TOKEN)
+    headers = {"Accept": "application/json"}
+    
+    try:
+        response = requests.get(get_url, headers=headers, auth=auth, timeout=10)
+        response.raise_for_status()
+        page_data = response.json()
+        
+        # Préparer la mise à jour
+        version = page_data["version"]["number"] + 1
+        update_url = f"{base_url}/rest/api/content/{page_id}"
+        
+        update_data = {
+            "version": {"number": version},
+            "title": page_data["title"],
+            "type": "page",
+            "body": {
+                "storage": {
+                    "value": page_data.get("body", {}).get("storage", {}).get("value", "") + 
+                            f"\n\n<h3>Tests générés automatiquement</h3>\n\n<pre><code>{content}</code></pre>",
+                    "representation": "storage"
+                }
+            }
+        }
+        
+        update_headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+        }
+        
+        update_response = requests.put(update_url, json=update_data, headers=update_headers, auth=auth, timeout=10)
+        update_response.raise_for_status()
+        
+        return jsonify({"message": "Page mise à jour avec succès"}), 200
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Erreur lors de la mise à jour de la page : {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/create-test-tasks", methods=["POST"])
+def create_test_tasks():
+    data = request.get_json()
+    project_key = data.get("projectKey", JIRA_PROJECT_KEY)
+    test_cases = data.get("testCases", [])
+    client_key = data.get("clientKey")
+    
+    if not client_key or client_key not in app_installations:
+        return jsonify({"error": "Installation non trouvée"}), 404
+    
+    installation = app_installations[client_key]
+    base_url = installation["base_url"]
+    
+    created_issues = []
+    
+    for test_case in test_cases:
+        issue_data = {
+            "fields": {
+                "project": {"key": project_key},
+                "summary": f"Test: {test_case.get('title', 'Cas de test')}",
+                "description": {
+                    "type": "doc",
+                    "version": 1,
+                    "content": [
+                        {
+                            "type": "paragraph",
+                            "content": [
+                                {"type": "text", "text": test_case.get("content", "")}
+                            ]
+                        }
+                    ]
+                },
+                "issuetype": {"name": "Task"}  # Ou un autre type adapté
+            }
+        }
+        
+        url = f"{base_url}/rest/api/3/issue"
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+        }
+        auth = (JIRA_EMAIL, JIRA_API_TOKEN)
+        
+        try:
+            response = requests.post(url, json=issue_data, headers=headers, auth=auth, timeout=10)
+            response.raise_for_status()
+            result = response.json()
+            created_issues.append({"key": result["key"], "title": test_case.get("title")})
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Erreur lors de la création de la tâche de test : {str(e)}")
+            return jsonify({"error": str(e), "created": created_issues}), 500
+    
+    return jsonify({"message": f"{len(created_issues)} tâches créées", "issues": created_issues}), 200
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
