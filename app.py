@@ -21,7 +21,7 @@ JIRA_EMAIL = os.getenv("JIRA_EMAIL")
 JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN")
 JIRA_PROJECT_KEY = os.getenv("ACD")
 API_URL = os.getenv("http://127.0.0.1:1234/v1/chat/completions")
-#APP_SECRET = os.getenv("APP_SECRET", "your-secret-key")  # À définir dans les variables d'environnement
+APP_SECRET = os.getenv("APP_SECRET", "your-secret-key")  # À définir dans les variables d'environnement
 
 # Pour stocker les installations d'applications (en production, utilisez une base de données)
 app_installations = {}
