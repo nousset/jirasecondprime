@@ -1,348 +1,114 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Générateur de Tests IA</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <base href="/" />
+  <title>Générateur de Tests</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aui/9.4.0/aui/aui-prototyping.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/aui/9.4.0/aui/aui-prototyping.min.js"></script>
   <script src="https://connect-cdn.atl-paas.net/all.js" onerror="handleAtlassianSDKError()"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-    
-    :root {
-      --primary-color: #4f46e5;
-      --primary-hover: #4338ca;
-      --secondary-color: #6366f1;
-      --text-primary: #111827;
-      --text-secondary: #4b5563;
-      --bg-primary: #f9fafb;
-      --bg-secondary: #ffffff;
-      --bg-tertiary: #f3f4f6;
-      --error-color: #ef4444;
-      --success-color: #10b981;
-    }
-    
-    body {
-      font-family: 'Inter', sans-serif;
-      background-color: var(--bg-primary);
-      color: var(--text-primary);
-    }
-
-    .gradient-header {
-      background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-    }
-    
-    .card {
-      border-radius: 0.75rem;
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    }
-    
-    .btn-primary {
-      background-color: var(--primary-color);
-      color: white;
-      transition: all 0.2s;
-    }
-    
-    .btn-primary:hover {
-      background-color: var(--primary-hover);
-    }
-    
-    .btn-secondary {
-      background-color: var(--bg-tertiary);
-      color: var(--text-secondary);
-      transition: all 0.2s;
-    }
-    
-    .btn-secondary:hover {
-      background-color: #e5e7eb;
-    }
-    
-    .fade-in {
-      animation: fadeIn 0.5s ease-in-out;
-    }
-    
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    
-    .spinner {
-      border: 3px solid rgba(255, 255, 255, 0.3);
-      border-radius: 50%;
-      border-top: 3px solid white;
-      width: 20px;
-      height: 20px;
-      animation: spin 1s linear infinite;
-    }
-    
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    
-    .test-results {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      white-space: pre-wrap;
-      background-color: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 0.375rem;
-      padding: 1rem;
-      font-size: 0.875rem;
-    }
-    
-    .custom-radio input {
-      position: absolute;
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
-    
-    .custom-radio label {
-      cursor: pointer;
-      padding: 0.5rem 1rem;
-      border-radius: 0.375rem;
-      border: 1px solid #d1d5db;
-      transition: all 0.2s;
-    }
-    
-    .custom-radio input:checked + label {
-      border-color: var(--primary-color);
-      background-color: rgba(79, 70, 229, 0.1);
-    }
-    
-    .slide-up {
-      animation: slideUp 0.4s ease-out;
-    }
-    
-    @keyframes slideUp {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
+    body { padding: 20px; font-family: Arial, sans-serif; }
+    .hidden { display: none; }
+    .loading { text-align: center; padding: 20px; }
+    .format-selector { margin-bottom: 20px; }
+    .test-results { background-color: #f4f5f7; border-radius: 3px; padding: 16px; white-space: pre-wrap; margin-top: 20px; }
+    .spinner { border: 4px solid rgba(0, 0, 0, 0.1); width: 36px; height: 36px; border-radius: 50%; border-left-color: #0052CC; animation: spin 1s linear infinite; margin: 20px auto; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    #standalone-mode { margin-bottom: 20px; padding: 15px; background-color: #FFFAE6; border-radius: 3px; border-left: 4px solid #FFAB00; }
+    textarea { width: 100%; min-height: 150px; margin-bottom: 15px; font-family: monospace; }
   </style>
 </head>
 <body>
-  <header class="gradient-header text-white shadow-md py-4 px-4">
-    <div class="container mx-auto flex justify-between items-center">
-      <div class="flex items-center space-x-3">
-        <i class="fas fa-flask-vial text-2xl"></i>
-        <h1 class="text-xl font-bold">Générateur de Tests IA</h1>
-      </div>
-      <div id="jiraInfo" class="hidden bg-white bg-opacity-20 py-1 px-3 rounded-lg text-sm">
-        <span id="issueDisplay"></span>
-      </div>
-    </div>
-  </header>
+  <section id="content" class="ac-content">
+    <h2>Générateur de Tests IA</h2>
 
-  <main class="container mx-auto px-4 py-6 max-w-4xl">
-    <!-- Alerte pour le mode autonome -->
-    <div id="standaloneAlert" class="hidden bg-amber-50 border-l-4 border-amber-400 p-4 mb-6 rounded-md">
-      <div class="flex items-start">
-        <div class="flex-shrink-0">
-          <i class="fas fa-info-circle text-amber-400"></i>
-        </div>
-        <div class="ml-3">
-          <h3 class="text-sm font-medium text-amber-800">Mode autonome</h3>
-          <p class="mt-1 text-sm text-amber-700">
-            L'application fonctionne actuellement en mode autonome, sans connexion à Jira.
-          </p>
-        </div>
-      </div>
+    <div id="standalone-mode" class="hidden">
+      <h3>Mode autonome</h3>
+      <textarea id="standalone-story">En tant qu'utilisateur, je souhaite pouvoir me connecter à l'application afin d'accéder à mes données personnelles.</textarea>
     </div>
 
-    <!-- Panneau d'erreur -->
-    <div id="errorPanel" class="hidden bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-md slide-up">
-      <div class="flex">
-        <div class="flex-shrink-0">
-          <i class="fas fa-exclamation-circle text-red-500"></i>
-        </div>
-        <div class="ml-3">
-          <h3 class="text-sm font-medium text-red-800">Erreur</h3>
-          <p id="errorMessage" class="mt-1 text-sm text-red-700"></p>
-        </div>
-        <button onclick="dismissError()" class="ml-auto text-red-500 hover:text-red-700">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-    </div>
-
-    <!-- Carte principale -->
-    <div class="card bg-white p-6 mb-6">
-      <h2 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200">Créer des tests</h2>
-      
-      <!-- Entrée Standalone -->
-      <div id="standaloneInput" class="hidden mb-6">
-        <label for="standalone-story" class="block text-sm font-medium text-gray-700 mb-2">User Story</label>
-        <textarea id="standalone-story" rows="5" class="w-full rounded-md border-gray-300 shadow-sm focus:ring-primary-color focus:border-primary-color p-3 text-sm" placeholder="Entrez votre user story ici..."></textarea>
-      </div>
-      
-      <!-- Affichage issue Jira -->
-      <div id="jiraStory" class="hidden mb-6">
-        <div class="bg-gray-50 rounded-md p-4">
-          <div class="font-medium text-sm text-gray-700 mb-2">User Story à analyser:</div>
-          <div id="story-text" class="text-sm text-gray-600 whitespace-pre-line"></div>
-        </div>
+    <div id="story-content" class="hidden">
+      <div class="aui-message aui-message-info">
+        <p class="title"><strong>User story à analyser:</strong></p>
+        <p id="story-text"></p>
       </div>
 
-      <!-- Loader pour le chargement de l'issue -->
-      <div id="loadingIssue" class="hidden py-8">
-        <div class="flex flex-col items-center justify-center">
-          <div class="w-10 h-10 border-4 border-gray-200 border-t-primary-color rounded-full animate-spin"></div>
-          <p class="mt-4 text-sm text-gray-500">Chargement des données...</p>
-        </div>
-      </div>
-      
-      <!-- Format de test -->
-      <div id="formatSelector" class="mb-6">
-        <p class="block text-sm font-medium text-gray-700 mb-3">Format de test souhaité</p>
-        <div class="flex flex-wrap gap-3">
-          <div class="custom-radio">
-            <input type="radio" id="gherkin" name="format" value="gherkin" checked>
-            <label for="gherkin" class="flex items-center">
-              <i class="fas fa-list-ol mr-2 text-gray-500"></i>
-              <span>Gherkin (Given/When/Then)</span>
-            </label>
+      <div class="format-selector">
+        <form class="aui">
+          <div class="radio">
+            <input type="radio" name="format" id="gherkin" value="gherkin" checked />
+            <label for="gherkin">Format Gherkin (Given/When/Then)</label>
           </div>
-          <div class="custom-radio">
-            <input type="radio" id="detailed" name="format" value="detailed">
-            <label for="detailed" class="flex items-center">
-              <i class="fas fa-clipboard-list mr-2 text-gray-500"></i>
-              <span>Cas de test détaillé</span>
-            </label>
+          <div class="radio">
+            <input type="radio" name="format" id="detailed" value="detailed" />
+            <label for="detailed">Format détaillé (Étapes/Résultats attendus)</label>
           </div>
-        </div>
+        </form>
       </div>
 
-      <!-- Option commentaire auto -->
-      <div id="autoCommentOption" class="mb-6 hidden">
-        <label class="flex items-center text-sm space-x-2">
-          <input type="checkbox" id="autoAddComment" class="h-4 w-4 text-primary-color border-gray-300 rounded focus:ring-primary-color">
-          <span>Ajouter automatiquement comme commentaire dans Jira</span>
-        </label>
-      </div>
-      
-      <!-- Boutons -->
-      <div class="flex flex-wrap gap-3">
-        <button id="generateBtn" class="btn-primary flex items-center px-4 py-2 rounded-md text-sm font-medium">
-          <i class="fas fa-wand-magic-sparkles mr-2"></i>
-          <span>Générer les tests</span>
-        </button>
-        <button id="resetBtn" class="btn-secondary flex items-center px-4 py-2 rounded-md text-sm font-medium">
-          <i class="fas fa-undo mr-2"></i>
-          <span>Réinitialiser</span>
-        </button>
+      <button id="generate-btn" class="aui-button aui-button-primary">Générer les tests</button>
+    </div>
+
+    <div id="loading" class="loading hidden">
+      <div class="spinner"></div>
+      <p>Génération des tests en cours...</p>
+    </div>
+
+    <div id="result-section" class="hidden">
+      <h3>Tests générés:</h3>
+      <div id="test-results" class="test-results"></div>
+      <div style="margin-top: 20px;">
+        <button id="copy-btn" class="aui-button">Copier</button>
+        <button id="insert-btn" class="aui-button aui-button-primary">Ajouter à l'issue/page</button>
       </div>
     </div>
 
-    <!-- Résultats -->
-    <div id="resultsCard" class="card bg-white p-6 hidden">
-      <div class="flex justify-between items-center mb-4 pb-2 border-b border-gray-200">
-        <h2 class="text-lg font-semibold">Résultats</h2>
-        <div class="flex space-x-2">
-          <button id="copyBtn" class="flex items-center px-3 py-1 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 text-sm">
-            <i class="far fa-copy mr-1"></i>
-            <span>Copier</span>
-          </button>
-        </div>
-      </div>
-      
-      <!-- Loader pour la génération -->
-      <div id="loadingGeneration" class="hidden py-8">
-        <div class="flex flex-col items-center justify-center">
-          <div class="w-10 h-10 border-4 border-gray-200 border-t-primary-color rounded-full animate-spin"></div>
-          <p class="mt-4 text-sm text-gray-500">Génération des tests en cours...</p>
-        </div>
-      </div>
-
-      <div id="resultContent" class="test-results"></div>
-      
-      <div id="jiraActions" class="mt-6 hidden">
-        <button id="addCommentBtn" class="btn-primary flex items-center px-4 py-2 rounded-md text-sm font-medium">
-          <i class="far fa-comment-dots mr-2"></i>
-          <span>Ajouter comme commentaire dans Jira</span>
-        </button>
+    <div id="error-message" class="hidden">
+      <div class="aui-message aui-message-error">
+        <p class="title"><strong>Erreur</strong></p>
+        <p id="error-text"></p>
       </div>
     </div>
-  </main>
-
-  <footer class="mt-auto py-6 bg-gray-800 text-gray-300">
-    <div class="container mx-auto px-4">
-      <div class="flex flex-col md:flex-row justify-between items-center">
-        <p class="text-sm">© 2025 Générateur de Tests IA</p>
-        <div class="mt-3 md:mt-0 flex space-x-4">
-          <a href="#" class="text-sm text-gray-400 hover:text-white">Aide</a>
-          <a href="#" class="text-sm text-gray-400 hover:text-white">À propos</a>
-        </div>
-      </div>
-    </div>
-  </footer>
+  </section>
 
   <script>
-    // Variables globales
     let contextData = {};
     let isStandaloneMode = false;
-    let issueKey = null;
-    let clientKey = 'test-client';
-    
-    // Gestion des erreurs de chargement du SDK Atlassian
+
     function handleAtlassianSDKError() {
       console.log("SDK Atlassian non disponible - activation du mode autonome");
       enableStandaloneMode();
     }
-    
-    // Fonction pour activer le mode autonome
+
     function enableStandaloneMode() {
       isStandaloneMode = true;
-      document.getElementById('standaloneAlert').classList.remove('hidden');
-      document.getElementById('standaloneInput').classList.remove('hidden');
-      document.getElementById('jiraActions').classList.add('hidden');
-      document.getElementById('autoCommentOption').classList.add('hidden');
+      document.getElementById('standalone-mode').classList.remove('hidden');
+      document.getElementById('story-content').classList.remove('hidden');
+      document.getElementById('insert-btn').classList.add('hidden');
     }
-    
-    // Afficher une erreur
-    function showError(message) {
-      const errorPanel = document.getElementById('errorPanel');
-      const errorMessage = document.getElementById('errorMessage');
-      
-      errorMessage.textContent = message;
-      errorPanel.classList.remove('hidden');
-      
-      // Auto-dismiss après 8 secondes
-      setTimeout(() => {
-        dismissError();
-      }, 8000);
-    }
-    
-    // Masquer le message d'erreur
-    function dismissError() {
-      document.getElementById('errorPanel').classList.add('hidden');
-    }
-    
-    // Initialisation en mode Atlassian
+
     function initializeAtlassianMode() {
       try {
         if (typeof AP !== 'undefined') {
           AP.context.getContext(function(context) {
-            console.log("Contexte Atlassian:", context);
-            
-            // Récupérer les paramètres de l'URL
-            const urlParams = new URLSearchParams(window.location.search);
-            issueKey = urlParams.get('issueKey');
-            clientKey = urlParams.get('clientKey') || 'test-client';
-            
-            if (issueKey) {
-              document.getElementById('jiraInfo').classList.remove('hidden');
-              document.getElementById('issueDisplay').textContent = issueKey;
-              document.getElementById('jiraStory').classList.remove('hidden');
-              document.getElementById('loadingIssue').classList.remove('hidden');
-              document.getElementById('jiraActions').classList.remove('hidden');
-              document.getElementById('autoCommentOption').classList.remove('hidden');
-              
-              // Récupérer les détails de l'issue
-              fetchIssueDetails(issueKey, clientKey);
-            } else {
-              enableStandaloneMode();
-            }
+            AP.dialog.getCustomData(function(data) {
+              if (data) {
+                contextData = data;
+                const storyElement = document.getElementById('story-text');
+                if (data.type === 'jira') {
+                  storyElement.textContent = data.summary + "\n\n" + data.description;
+                } else if (data.type === 'confluence') {
+                  const tempDiv = document.createElement('div');
+                  tempDiv.innerHTML = data.pageContent;
+                  storyElement.textContent = data.pageTitle + "\n\n" + tempDiv.textContent;
+                }
+                document.getElementById('story-content').classList.remove('hidden');
+              } else {
+                enableStandaloneMode();
+              }
+            });
           });
         } else {
           enableStandaloneMode();
@@ -352,172 +118,25 @@
         enableStandaloneMode();
       }
     }
-    
-    // Récupérer les détails d'une issue Jira
-    function fetchIssueDetails(key, clientKey) {
-      fetch(`/get-issue?key=${key}&clientKey=${clientKey}`)
-        .then(response => {
-          if (!response.ok) {
-            throw new Error(`Erreur HTTP: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then(data => {
-          document.getElementById('loadingIssue').classList.add('hidden');
-          
-          if (data.error) {
-            showError(data.error);
-            enableStandaloneMode();
+
+    function simulateTestGeneration(storyText, format) {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          let result = "";
+          if (format === 'gherkin') {
+            result = `Feature: Connexion\n\nScenario: Connexion réussie\n  Given l'utilisateur est sur la page de connexion\n  When l'utilisateur entre des identifiants valides\n  Then l'utilisateur accède à son tableau de bord`;
           } else {
-            const storyText = document.getElementById('story-text');
-            storyText.textContent = `${data.summary}\n\n${data.description}`;
+            result = `Test Case 1:\nÉtapes:\n1. Aller sur la page de connexion\n2. Entrer identifiants valides\nRésultat attendu:\n- Connexion réussie`;
           }
-        })
-        .catch(error => {
-          document.getElementById('loadingIssue').classList.add('hidden');
-          showError(`Erreur lors de la récupération de l'issue: ${error.message}`);
-          enableStandaloneMode();
-        });
-    }
-    
-    // Générer les tests
-    function generateTests() {
-      // Récupérer le texte de la user story
-      const userStory = isStandaloneMode
-        ? document.getElementById('standalone-story').value.trim()
-        : document.getElementById('story-text').textContent.trim();
-      
-      if (!userStory) {
-        showError("Veuillez entrer une user story");
-        return;
-      }
-      
-      // Récupérer le format sélectionné
-      const formatChoice = document.querySelector('input[name="format"]:checked').value;
-      
-      // Afficher l'interface de chargement
-      document.getElementById('resultsCard').classList.remove('hidden');
-      document.getElementById('resultContent').textContent = '';
-      document.getElementById('loadingGeneration').classList.remove('hidden');
-      document.getElementById('resultContent').classList.add('hidden');
-      
-      // Appel API pour générer les tests
-      fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ story: userStory, format: formatChoice })
-      })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`Erreur HTTP: ${response.status}`);
-        }
-        return response.json();
-      })
-      .then(data => {
-        document.getElementById('loadingGeneration').classList.add('hidden');
-        document.getElementById('resultContent').classList.remove('hidden');
-        
-        if (data.error) {
-          showError(data.error);
-        } else {
-          document.getElementById('resultContent').textContent = data.result;
-          
-          // Si option auto-commentaire cochée
-          if (!isStandaloneMode && document.getElementById('autoAddComment').checked) {
-            addCommentToJira(data.result);
-          }
-        }
-      })
-      .catch(error => {
-        document.getElementById('loadingGeneration').classList.add('hidden');
-        document.getElementById('resultContent').classList.remove('hidden');
-        showError(`Erreur lors de la génération: ${error.message}`);
+          resolve(result);
+        }, 1500);
       });
     }
-    
-    // Ajouter un commentaire à Jira
-    function addCommentToJira(commentText) {
-      const addCommentBtn = document.getElementById('addCommentBtn');
-      
-      addCommentBtn.disabled = true;
-      addCommentBtn.innerHTML = '<div class="spinner mr-2"></div><span>Ajout en cours...</span>';
-      
-      fetch('/api/add-comment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          issueKey: issueKey,
-          comment: commentText,
-          clientKey: clientKey
-        })
-      })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`Erreur HTTP: ${response.status}`);
-        }
-        return response.json();
-      })
-      .then(data => {
-        addCommentBtn.disabled = false;
-        
-        if (data.error) {
-          addCommentBtn.innerHTML = '<i class="far fa-comment-dots mr-2"></i><span>Ajouter comme commentaire dans Jira</span>';
-          showError(data.error);
-        } else {
-          addCommentBtn.innerHTML = '<i class="fas fa-check mr-2"></i><span>Commentaire ajouté!</span>';
-          
-          setTimeout(() => {
-            addCommentBtn.innerHTML = '<i class="far fa-comment-dots mr-2"></i><span>Ajouter comme commentaire dans Jira</span>';
-          }, 3000);
-        }
-      })
-      .catch(error => {
-        addCommentBtn.disabled = false;
-        addCommentBtn.innerHTML = '<i class="far fa-comment-dots mr-2"></i><span>Ajouter comme commentaire dans Jira</span>';
-        showError(`Erreur lors de l'ajout du commentaire: ${error.message}`);
-      });
-    }
-    
-    // Copier le résultat
-    function copyResult() {
-      const text = document.getElementById('resultContent').textContent;
-      
-      navigator.clipboard.writeText(text)
-        .then(() => {
-          const copyBtn = document.getElementById('copyBtn');
-          const originalHTML = copyBtn.innerHTML;
-          
-          copyBtn.innerHTML = '<i class="fas fa-check mr-1"></i><span>Copié!</span>';
-          
-          setTimeout(() => {
-            copyBtn.innerHTML = originalHTML;
-          }, 2000);
-        })
-        .catch(err => {
-          showError(`Erreur lors de la copie: ${err.message}`);
-        });
-    }
-    
-    // Réinitialiser le formulaire
-    function resetForm() {
-      if (isStandaloneMode) {
-        document.getElementById('standalone-story').value = '';
-      }
-      
-      document.getElementById('resultsCard').classList.add('hidden');
-      document.getElementById('resultContent').textContent = '';
-      
-      // Réinitialiser le format à Gherkin
-      document.getElementById('gherkin').checked = true;
-    }
-    
-    // Initialisation au chargement de la page
+
     document.addEventListener('DOMContentLoaded', () => {
-      // Vérifier si AP est défini
       if (typeof AP !== 'undefined') {
         initializeAtlassianMode();
       } else {
-        // Attendre un peu au cas où le SDK est en cours de chargement
         setTimeout(() => {
           if (typeof AP !== 'undefined') {
             initializeAtlassianMode();
@@ -526,14 +145,44 @@
           }
         }, 1000);
       }
-      
-      // Event listeners
-      document.getElementById('generateBtn').addEventListener('click', generateTests);
-      document.getElementById('resetBtn').addEventListener('click', resetForm);
-      document.getElementById('copyBtn').addEventListener('click', copyResult);
-      document.getElementById('addCommentBtn')?.addEventListener('click', () => {
-        const resultText = document.getElementById('resultContent').textContent;
-        addCommentToJira(resultText);
+
+      document.getElementById('generate-btn').addEventListener('click', async () => {
+        const storyText = isStandaloneMode
+          ? document.getElementById('standalone-story').value
+          : document.getElementById('story-text').textContent;
+        const format = document.querySelector('input[name="format"]:checked').value;
+
+        document.getElementById('story-content').classList.add('hidden');
+        document.getElementById('loading').classList.remove('hidden');
+
+        try {
+          const result = await simulateTestGeneration(storyText, format);
+          document.getElementById('test-results').textContent = result;
+          document.getElementById('result-section').classList.remove('hidden');
+        } catch (err) {
+          document.getElementById('error-message').classList.remove('hidden');
+          document.getElementById('error-text').textContent = "Erreur lors de la génération des tests.";
+        } finally {
+          document.getElementById('loading').classList.add('hidden');
+        }
+      });
+
+      document.getElementById('copy-btn').addEventListener('click', () => {
+        const text = document.getElementById('test-results').textContent;
+        navigator.clipboard.writeText(text).then(() => alert("Tests copiés !"));
+      });
+
+      document.getElementById('insert-btn').addEventListener('click', () => {
+        if (typeof AP !== 'undefined' && contextData.type === 'jira') {
+          AP.request({
+            url: `/rest/api/2/issue/${contextData.key}/comment`,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ body: document.getElementById('test-results').textContent }),
+            success: () => alert("Commentaire ajouté à l'issue !"),
+            error: () => alert("Erreur lors de l'ajout du commentaire.")
+          });
+        }
       });
     });
   </script>
