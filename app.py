@@ -44,14 +44,18 @@ def create_retry_session(retries=3, backoff_factor=0.3):
 # Vérification de l’état de LM Studio
 def check_lm_studio_status():
     try:
-        models_url = f"{API_URL.rsplit('/', 2)[0]}/models"
+        # Utiliser directement l'URL de base sans manipuler le chemin
+        base_url = API_URL.split("/v1/")[0] if "/v1/" in API_URL else API_URL.rsplit("/", 3)[0]
+        # On peut faire une simple requête GET sans chemin spécifique ou utiliser /v1/models si disponible
+        models_url = f"{base_url}/v1/models" 
+        
+        logger.info(f"Vérification du serveur d'IA à {models_url}")
         response = requests.get(models_url, timeout=5)
-        logger.info(f"Vérification LM Studio à {models_url} -> {response.status_code}")
+        logger.info(f"Réponse: {response.status_code}")
         return response.status_code == 200
     except Exception as e:
-        logger.error(f"Erreur lors de la vérification LM Studio : {e}")
+        logger.error(f"Erreur lors de la vérification du serveur d'IA: {e}")
         return False
-
 # Construction du prompt
 def build_prompt(story_text, format_choice, language="fr"):
     if language == "fr":
