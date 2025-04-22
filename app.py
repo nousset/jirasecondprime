@@ -74,13 +74,15 @@ def check_lm_studio_status(force=False):
     try:
         logger.info(f"Vérification LM Studio à {LM_STUDIO_MODELS_URL}")
         
-        # Utiliser une nouvelle session pour éviter les problèmes de cache
-        response = requests.get(LM_STUDIO_MODELS_URL, timeout=10)
+        # Utiliser une session avec retry pour plus de fiabilité
+        session = get_http_session()
+        response = session.get(LM_STUDIO_MODELS_URL, timeout=10)
         logger.info(f"Réponse: {response.status_code}")
         
-        success = False
-        if response.status_code == 200:
-            # Vérifier que la réponse contient bien des modèles
+        success = response.status_code == 200
+        
+        # Vérifier que la réponse contient bien des modèles
+        if success:
             try:
                 models_data = response.json()
                 if "data" in models_data and len(models_data["data"]) > 0:
@@ -89,11 +91,15 @@ def check_lm_studio_status(force=False):
                     # Vérifier que notre modèle par défaut est disponible
                     if DEFAULT_MODEL in model_ids:
                         logger.info(f"Le modèle par défaut {DEFAULT_MODEL} est disponible")
-                    success = True
+                    else:
+                        logger.warning(f"Le modèle par défaut {DEFAULT_MODEL} n'est pas disponible")
+                        success = False  # Considérer comme non disponible si le modèle par défaut n'est pas trouvé
                 else:
                     logger.warning(f"Réponse valide mais sans modèles: {models_data}")
+                    success = False
             except json.JSONDecodeError as e:
                 logger.error(f"Erreur de décodage JSON: {e}, contenu: {response.text[:100]}")
+                success = False
         
         # Mettre à jour le statut
         lm_studio_status["available"] = success
@@ -174,7 +180,8 @@ Expected format:
 # Envoi du prompt à LM Studio
 def generate_response(prompt, max_tokens=800, temperature=0.7, model=DEFAULT_MODEL):
     """Envoie un prompt à LM Studio et retourne la réponse générée"""
-    status = check_lm_studio_status()
+    # Forcer une vérification fraîche pour s'assurer que LM Studio est réellement disponible
+    status = check_lm_studio_status(force=True)
     logger.info(f"Status LM Studio dans generate_response: {status}")
     
     if not status:
@@ -192,9 +199,9 @@ def generate_response(prompt, max_tokens=800, temperature=0.7, model=DEFAULT_MOD
     try:
         logger.info(f"Envoi d'une requête au modèle {model} à {LM_STUDIO_CHAT_URL}")
         
-        # Pour les requêtes de génération, utiliser directement requests sans la session avec retry
-        # pour éviter des problèmes potentiels de timeout
-        response = requests.post(LM_STUDIO_CHAT_URL, json=payload, headers=headers, timeout=120)
+        # Utiliser la session HTTP avec retry pour plus de fiabilité
+        session = get_http_session()
+        response = session.post(LM_STUDIO_CHAT_URL, json=payload, headers=headers, timeout=120)
         
         if response.status_code != 200:
             logger.error(f"Erreur HTTP {response.status_code}: {response.text}")
@@ -267,8 +274,8 @@ def api_generate():
         if not story:
             return jsonify({"error": "Aucune user story fournie"}), 400
 
-        # Vérifier d'abord l'état de LM Studio
-        if not check_lm_studio_status():
+        # Vérifier d'abord l'état de LM Studio - forcer une vérification fraîche
+        if not check_lm_studio_status(force=True):
             logger.error("LM Studio inaccessible lors de l'appel à api_generate")
             return jsonify({"error": "LM Studio n'est pas accessible. Veuillez vérifier la connexion et réessayer."}), 503
 
@@ -323,7 +330,9 @@ def test_generation():
         logger.info(f"Test de génération à {LM_STUDIO_CHAT_URL}")
         
         try:
-            response = requests.post(LM_STUDIO_CHAT_URL, json=payload, headers=headers, timeout=30)
+            # Utiliser la session HTTP avec retry
+            session = get_http_session()
+            response = session.post(LM_STUDIO_CHAT_URL, json=payload, headers=headers, timeout=30)
             logger.info(f"Réponse test: {response.status_code}")
             
             if response.status_code == 200:
@@ -357,14 +366,21 @@ def api_models():
         if not check_lm_studio_status(force=True):
             return jsonify({"error": "LM Studio n'est pas accessible"}), 503
             
-        response = requests.get(LM_STUDIO_MODELS_URL, timeout=10)
+        # Utiliser la session HTTP avec retry
+        session = get_http_session()
+        response = session.get(LM_STUDIO_MODELS_URL, timeout=10)
+        
         if response.status_code == 200:
-            models_data = response.json()
-            # Ajouter le modèle par défaut
-            return jsonify({
-                "data": models_data.get("data", []),
-                "default_model": DEFAULT_MODEL
-            }), 200
+            try:
+                models_data = response.json()
+                # Ajouter le modèle par défaut
+                return jsonify({
+                    "data": models_data.get("data", []),
+                    "default_model": DEFAULT_MODEL
+                }), 200
+            except json.JSONDecodeError as e:
+                logger.error(f"Erreur de décodage JSON: {e}")
+                return jsonify({"error": "Format de réponse invalide"}), 500
         return jsonify({"error": f"Erreur {response.status_code}"}), response.status_code
     except Exception as e:
         logger.error(f"Erreur lors de la récupération des modèles: {e}")
@@ -387,6 +403,27 @@ def reset_connection():
         "status": status,
         "message": "Connexion à LM Studio réinitialisée"
     }), 200
+
+@app.route("/api/healthcheck", methods=["GET"])
+def healthcheck():
+    """Effectue une vérification complète du système"""
+    try:
+        # Vérifie LM Studio
+        lm_status = check_lm_studio_status(force=True)
+        
+        # Teste une génération simple
+        test_response = None
+        if lm_status:
+            test_prompt = "Test court"
+            test_response = generate_response(test_prompt, max_tokens=10)
+        
+        return jsonify({
+            "status": "ok" if lm_status else "error",
+            "lm_studio": lm_status,
+            "test_generation": test_response is not None and not test_response.startswith("Erreur")
+        }), 200 if lm_status else 503
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == "__main__":
     # Vérifier la configuration au démarrage
