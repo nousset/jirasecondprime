@@ -38,12 +38,12 @@
           }
         },
         "target": {
-          "type": "web_panel",
-          "url": "/test-generator"
+          "type": "dialogmodule",
+          "key": "test-generator-dialog"
         },
         "conditions": [
           {
-            "condition": "issue_type",
+            "condition": "jira_issue_type",
             "params": {
               "issueTypes": ["Story", "Task", "Bug"]
             }
@@ -55,10 +55,17 @@
       {
         "key": "test-generator-dialog",
         "options": {
-          "size": "medium",
-          "chrome": true
+          "width": "800px",
+          "height": "600px",
+          "chrome": true,
+          "title": "Générateur de tests"
         },
-        "url": "/test-generator"
+        "url": "/jira-test-generator",
+        "context": {
+          "jira": {
+            "issue": true
+          }
+        }
       }
     ]
   }
