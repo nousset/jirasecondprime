@@ -26,7 +26,7 @@ JIRA_BASE_URL = os.getenv("JIRA_BASE_URL")
 JIRA_EMAIL = os.getenv("JIRA_EMAIL")
 JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN")
 JIRA_PROJECT_KEY = os.getenv("JIRA_PROJECT_KEY")
-API_URL = "http://127.0.0.1:1234/v1/chat/completions"  # URL directe de l'API LM Studio
+API_URL = "https://butler-insert-particles-males.trycloudflare.com/v1/chat/completions"  # URL directe de l'API LM Studio
 APP_SECRET = os.getenv("APP_SECRET", "your-secret-key")
 
 # Pour stocker les installations d'applications
@@ -466,7 +466,7 @@ def add_comment():
         session = create_retry_session()
         response = session.post(url, json=comment_body, headers=headers, auth=auth, timeout=10)
         response.raise_for_status()
-        return jsonify({"message": "Commentaire ajout avec succès"}), 200
+        return jsonify({"message": "Commentaire ajouté avec succès"}), 200
     except requests.exceptions.RequestException as e:
         logger.error(f"Erreur lors de l'ajout du commentaire : {str(e)}")
         return jsonify({"error": str(e)}), 500
