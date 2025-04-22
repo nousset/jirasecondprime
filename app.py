@@ -20,12 +20,13 @@ HTML_INDEX = "index.html"
 CONTENT_TYPE_JSON = "application/json"
 
 # Configurations
-JIRA_BASE_URL = os.getenv("JIRA_BASE_URL")
+JIRA_BASE_URL = "http://127.0.0.1:1234/v1/chat/completions"
 JIRA_EMAIL = os.getenv("JIRA_EMAIL")
 JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN")
 JIRA_PROJECT_KEY = os.getenv("JIRA_PROJECT_KEY")
 API_URL = os.getenv("API_URL")  # URL de l'API LM Studio
 APP_SECRET = os.getenv("APP_SECRET", "your-secret-key")
+
 
 # Pour stocker les installations d'applications
 app_installations = {}
