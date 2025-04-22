@@ -2,77 +2,78 @@ AP.register({
   'test-generator-dialog': function(dialog) {
     // Récupère le contexte (Jira ou Confluence)
     AP.context.getContext(function(context) {
-
-      if (context.jira) {
+      const clientKey = context.hostClientKey;
+      
+      
+        if (context?.jira?.issue) { const issueKey = context.jira.issue.key;
+        
+          // Redirection vers l'endpoint de l'application pour Jira
+          dialog.getContentOptions().then(function(options) {
+            options.customData = {
+              url: `/jira-test-generator?issueKey=${issueKey}&clientKey=${clientKey}`
+            };
+            dialog.setContent(options);
+          });}
         // --- Cas Jira ---
-        AP.require('request', function(request) {
-          const issueKey = context.jira.issue.key;
-
-          request({
-            url: '/rest/api/latest/issue/' + issueKey,
-            type: 'GET',
-            success: function(response) {
-              const issue = JSON.parse(response);
-              const description = issue.fields.description || '';
-              const summary = issue.fields.summary || '';
-
-              dialog.getContentOptions().then(function(options) {
-                options.customData = {
-                  type: 'jira',
-                  issueKey: issueKey,
-                  summary: summary,
-                  description: description
-                };
-                dialog.setContent(options); // 💡 Assure la mise à jour
-              });
-            },
-            error: function(xhr) {
-              console.error('Erreur lors de la récupération de l’issue Jira:', xhr);
-            }
-          });
-        });
-
-      } else if (context.confluence) {
+       
+        
+       else if (context.confluence) {
         // --- Cas Confluence ---
-        const pageId = context.confluence.content.id;
-
-        AP.request({
-          url: '/rest/api/content/' + pageId + '?expand=body.storage',
-          type: 'GET',
-          success: function(response) {
-            const page = JSON.parse(response);
-            const pageContent = page.body?.storage?.value || '';
-            const pageTitle = page.title || '';
-
-            dialog.getContentOptions().then(function(options) {
-              options.customData = {
-                type: 'confluence',
-                pageId: pageId,
-                pageTitle: pageTitle,
-                pageContent: pageContent
-              };
-              dialog.setContent(options); // 💡 Assure la mise à jour
-            });
-          },
-          error: function(xhr) {
-            console.error('Erreur lors de la récupération de la page Confluence:', xhr);
-          }
+        // Redirection vers l'endpoint de l'application pour Confluence
+        dialog.getContentOptions().then(function(options) {
+          options.customData = {
+            url: `/confluence-test-generator?clientKey=${clientKey}`
+          };
+          dialog.setContent(options);
         });
       }
-
     });
   }
 });
 
-// ✅ Fonction pour ouvrir le dialogue
+// Fonction pour ouvrir le dialogue
 function openGenerateTestDialog() {
   AP.dialog.create({
     key: 'test-generator-dialog',
-    width: '800px',
-    height: '600px'
+    width: '80%',
+    height: '80%',
+    chrome: true
   });
 }
 
-// ✅ Gestion des événements
-AP.events.on('jira-issue-glance-clicked', openGenerateTestDialog);
-AP.events.on('confluence-content-byline-item-clicked', openGenerateTestDialog);
+// Initialisation pour Jira
+function initJira() {
+  // Ajouter un glance dans l'interface JIRA
+  AP.jira.addGlance({
+    moduleKey: 'test-generator-glance',
+    icon: {
+      url: '/static/test-icon.png'
+    },
+    name: {
+      value: 'Générateur de tests'
+    },
+    target: 'jira-issue-glance',
+    apiVersion: 1
+  });
+}
+
+// Initialisation pour Confluence
+function initConfluence() {
+  // Ajouter un élément dans la barre d'outils de Confluence
+  AP.confluence.addContentBylineItem({
+    moduleKey: 'test-generator-confluence',
+    callback: openGenerateTestDialog,
+    label: 'Générateur de tests'
+  });
+}
+
+// Initialisation en fonction du produit
+AP.context.getContext(function(context) {
+  if (context.jira) {
+    initJira();
+    // Écouter l'événement de clic sur le glance
+    AP.events.on('jira-issue-glance-click:test-generator-glance', openGenerateTestDialog);
+  } else if (context.confluence) {
+    initConfluence();
+  }
+});

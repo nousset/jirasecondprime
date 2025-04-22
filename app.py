@@ -15,26 +15,100 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__, static_folder="public", template_folder="template")
 CORS(app)
 
+# Constantes pour éviter les duplications de chaînes littérales
+HTML_INDEX = "index.html"
+CONTENT_TYPE_JSON = "application/json"
+
 # Configurations
 JIRA_BASE_URL = os.getenv("JIRA_BASE_URL")
 JIRA_EMAIL = os.getenv("JIRA_EMAIL")
 JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN")
 JIRA_PROJECT_KEY = os.getenv("JIRA_PROJECT_KEY")
-API_URL = os.getenv("API_URL")
-APP_SECRET = os.getenv("APP_SECRET", "your-secret-key")  # À définir dans les variables d'environnement
+API_URL = os.getenv("API_URL")  # URL de l'API LM Studio
+APP_SECRET = os.getenv("APP_SECRET", "your-secret-key")
 
-# Pour stocker les installations d'applications (en production, utilisez une base de données)
+# Pour stocker les installations d'applications
 app_installations = {}
 
-def build_prompt(story_text, format_choice):
-    if format_choice == "gherkin":
-        return f"""Voici une user story : "{story_text}"
-En tant qu'assistant de test, génère un scénario de test au format Gherkin (Given/When/Then) en français."""
-    else:
-        return f"""Voici une user story : "{story_text}"
-Génère un cas de test détaillé avec les étapes et résultats attendus."""
+def build_prompt(story_text, format_choice, language="fr"):
+    """
+    Construit le prompt pour le modèle IA en fonction du format choisi et de la langue
+    """
+    if language == "fr":
+        if format_choice == "gherkin":
+            return f"""Voici une user story : "{story_text}"
+En tant qu'assistant de test, génère des scénarios de test au format Gherkin (Given/When/Then) en français.
+Sépare clairement chaque scénario et assure-toi que tous les aspects importants de la user story sont couverts.
 
-def generate_response(prompt, max_tokens=500):
+Format attendu:
+Feature: [Titre de la fonctionnalité]
+
+  Scenario: [Titre du scénario 1]
+    Given [condition préalable]
+    When [action utilisateur]
+    Then [résultat attendu]
+    And [résultat additionnel si nécessaire]
+
+  Scenario: [Titre du scénario 2]
+    Given [condition préalable]
+    ...
+"""
+        else:  # Action/Résultat attendu
+            return f"""Voici une user story : "{story_text}"
+Génère des cas de test détaillés en français avec les étapes et résultats attendus.
+Utilise le format Action/Résultat attendu, en numérotant chaque cas de test.
+
+Format attendu:
+# Cas de test 1 : [Titre du cas de test]
+## Action
+[Description détaillée de l'action utilisateur]
+
+## Résultat attendu
+[Description détaillée du résultat attendu]
+
+# Cas de test 2 : [Titre du cas de test]
+...
+"""
+    else:  # Anglais
+        if format_choice == "gherkin":
+            return f"""Here is a user story: "{story_text}"
+As a test assistant, generate test scenarios in Gherkin format (Given/When/Then) in English.
+Clearly separate each scenario and ensure all important aspects of the user story are covered.
+
+Expected format:
+Feature: [Feature title]
+
+  Scenario: [Scenario 1 title]
+    Given [precondition]
+    When [user action]
+    Then [expected result]
+    And [additional result if needed]
+
+  Scenario: [Scenario 2 title]
+    Given [precondition]
+    ...
+"""
+        else:  # Action/Expected Result
+            return f"""Here is a user story: "{story_text}"
+Generate detailed test cases in English with steps and expected results.
+Use the Action/Expected Result format, numbering each test case.
+
+Expected format:
+# Test Case 1: [Test case title]
+## Action
+[Detailed description of user action]
+
+## Expected Result
+[Detailed description of expected result]
+
+# Test Case 2: [Test case title]
+...
+"""
+
+def generate_response(prompt, max_tokens=800):
+    """
+    Envoie le prompt au modèle IA local via l'API LM Studio
+    """
     payload = {
         "model": "mistral-7b-instruct-v0.3",
         "messages": [{"role": "user", "content": prompt}],
@@ -55,7 +129,7 @@ def generate_response(prompt, max_tokens=500):
 
 @app.route("/")
 def home():
-    return render_template("index.html")
+    return render_template(HTML_INDEX)
 
 @app.route("/public/<path:path>")
 def serve_public(path):
@@ -67,16 +141,122 @@ def serve_static(path):
 
 @app.route("/api/generate", methods=["POST"])
 def api_generate():
+    """
+    Endpoint pour générer des cas de test à partir d'une user story
+    """
     data = request.get_json()
     story = data.get("story", "").strip()
     format_choice = data.get("format", "gherkin")
+    language = data.get("language", "fr")
 
     if not story:
         return jsonify({"error": "Aucune user story fournie"}), 400
 
-    prompt = build_prompt(story, format_choice)
+    prompt = build_prompt(story, format_choice, language)
     generated = generate_response(prompt)
     return jsonify({"result": generated})
+
+# Fonction de préparation des données pour la création de tâche JIRA
+def prepare_jira_task_data(story, test_cases, format_choice, language):
+    """
+    Prépare les données pour la création d'une tâche JIRA
+    """
+    # Définir le titre de la tâche en fonction de la langue
+    task_title = "Cas de test: " if language == "fr" else "Test Cases: "
+    task_title += story[:50] + "..." if len(story) > 50 else story
+    
+    # Construire le corps de la description avec mise en forme pour JIRA
+    description = {
+        "version": 1,
+        "type": "doc",
+        "content": [
+            {
+                "type": "paragraph",
+                "content": [
+                    {"type": "text", "text": "User Story: " + story}
+                ]
+            },
+            {
+                "type": "heading",
+                "attrs": {"level": 3},
+                "content": [
+                    {"type": "text", "text": "Tests générés" if language == "fr" else "Generated Test Cases"}
+                ]
+            },
+            {
+                "type": "codeBlock",
+                "attrs": {"language": "gherkin" if format_choice == "gherkin" else "text"},
+                "content": [
+                    {"type": "text", "text": test_cases}
+                ]
+            }
+        ]
+    }
+    
+    return task_title, description
+
+# Fonction pour envoyer la requête à l'API JIRA
+def send_jira_request(base_url, task_title, description):
+    """
+    Envoie la requête à l'API JIRA pour créer une tâche
+    """
+    payload = {
+        "fields": {
+            "project": {
+                "key": JIRA_PROJECT_KEY
+            },
+            "summary": task_title,
+            "description": description,
+            "issuetype": {
+                "name": "Task"
+            }
+        }
+    }
+    
+    url = f"{base_url}/rest/api/3/issue"
+    headers = {
+        "Accept": CONTENT_TYPE_JSON,
+        "Content-Type": CONTENT_TYPE_JSON
+    }
+    auth = (JIRA_EMAIL, JIRA_API_TOKEN)
+    
+    response = requests.post(url, json=payload, headers=headers, auth=auth, timeout=10)
+    response.raise_for_status()
+    return response.json()
+
+@app.route("/api/create-task", methods=["POST"])
+def create_jira_task():
+    """
+    Endpoint pour créer une tâche JIRA contenant les cas de test générés
+    """
+    data = request.get_json()
+    story = data.get("story", "").strip()
+    test_cases = data.get("testCases", "").strip()
+    format_choice = data.get("format", "gherkin")
+    language = data.get("language", "fr")
+    client_key = data.get("clientKey")
+    
+    if not all([story, test_cases, client_key]):
+        return jsonify({"error": "Paramètres manquants"}), 400
+    
+    if client_key not in app_installations:
+        # Utiliser les identifiants par défaut si l'installation n'est pas trouvée
+        base_url = JIRA_BASE_URL
+    else:
+        installation = app_installations[client_key]
+        base_url = installation["base_url"]
+    
+    try:
+        # Préparer les données de la tâche
+        task_title, description = prepare_jira_task_data(story, test_cases, format_choice, language)
+        
+        # Envoyer la requête à l'API JIRA
+        response_data = send_jira_request(base_url, task_title, description)
+        
+        return jsonify(response_data), 201
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Erreur lors de la création de la tâche JIRA : {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/get-issue")
 def get_issue():
@@ -93,7 +273,7 @@ def get_issue():
     
     url = f"{base_url}/rest/api/3/issue/{issue_key}"
     auth = (JIRA_EMAIL, JIRA_API_TOKEN)
-    headers = {"Accept": "application/json"}
+    headers = {"Accept": CONTENT_TYPE_JSON}
 
     try:
         logger.info(f"Récupération de l'issue Jira: {issue_key}")
@@ -155,20 +335,21 @@ def uninstalled():
 @app.route("/jira-test-generator", methods=["GET"])
 def jira_test_generator():
     issue_key = request.args.get("issueKey")
+    client_key = request.args.get("clientKey", "")
     context = {
         "issue_key": issue_key,
-        "page_id": None
+        "client_key": client_key
     }
-    return render_template("index.html", **context)
+    return render_template(HTML_INDEX, **context)
 
 @app.route("/confluence-test-generator", methods=["GET"])
 def confluence_test_generator():
-    page_id = request.args.get("pageId")
+    client_key = request.args.get("clientKey", "")
     context = {
         "issue_key": None,
-        "page_id": page_id
+        "client_key": client_key
     }
-    return render_template("index.html", **context)
+    return render_template(HTML_INDEX, **context)
 
 def create_jwt_token(client_key, shared_secret, method, uri):
     now = datetime.now()
@@ -225,8 +406,8 @@ def add_comment():
     
     url = f"{base_url}/rest/api/3/issue/{issue_key}/comment"
     headers = {
-        "Accept": "application/json",
-        "Content-Type": "application/json"
+        "Accept": CONTENT_TYPE_JSON,
+        "Content-Type": CONTENT_TYPE_JSON
     }
     auth = (JIRA_EMAIL, JIRA_API_TOKEN)
     
