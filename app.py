@@ -466,7 +466,7 @@ def add_comment():
         session = create_retry_session()
         response = session.post(url, json=comment_body, headers=headers, auth=auth, timeout=10)
         response.raise_for_status()
-        return jsonify({"message": "Commentaire ajouté avec succès"}), 200
+        return jsonify({"message": "Commentaire ajout avec succès"}), 200
     except requests.exceptions.RequestException as e:
         logger.error(f"Erreur lors de l'ajout du commentaire : {str(e)}")
         return jsonify({"error": str(e)}), 500
