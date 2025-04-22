@@ -14,6 +14,6 @@ services:
       - key: JIRA_PROJECT_KEY
         value: ACD
       - key: API_URL
-        value: https://abraham-certification-memories-cl.trycloudflare.com
+        value: https://among-england-huge-dee.trycloudflare.com/v1/chat/completions
       - key: JIRA_API_TOKEN
         sync: false  # Vous devrez ajouter cette variable manuellement dans l'interface Render

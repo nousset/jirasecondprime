@@ -23,7 +23,7 @@ JIRA_BASE_URL = os.getenv("JIRA_BASE_URL")
 JIRA_EMAIL = os.getenv("JIRA_EMAIL")
 JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN")
 JIRA_PROJECT_KEY = os.getenv("JIRA_PROJECT_KEY")
-API_URL = os.getenv("LM_STUDIO_API", "http://127.0.0.1:1234/v1/chat/completions")  # Modifiable par variable d'env
+API_URL = os.getenv("LM_STUDIO_API", "https://among-england-huge-dee.trycloudflare.com/v1/chat/completions")  # Modifiable par variable d'env
 APP_SECRET = os.getenv("APP_SECRET", "your-secret-key")
 
 # Session HTTP avec retry
@@ -44,9 +44,12 @@ def create_retry_session(retries=3, backoff_factor=0.3):
 # Vérification de l’état de LM Studio
 def check_lm_studio_status():
     try:
-        models_url = f"{API_URL.rsplit('/', 2)[0]}/models"
-        response = requests.get(models_url, timeout=5)
-        logger.info(f"Vérification LM Studio à {models_url} -> {response.status_code}")
+        # Extraire la partie base de l'URL
+        base_url = "/".join(API_URL.split("/")[:-2]) if "/v1/" in API_URL else API_URL
+        models_url = f"{base_url}/v1/models"
+        logger.info(f"Vérification LM Studio à {models_url}")
+        response = requests.get(models_url, timeout=10)
+        logger.info(f"Réponse: {response.status_code}")
         return response.status_code == 200
     except Exception as e:
         logger.error(f"Erreur lors de la vérification LM Studio : {e}")
@@ -151,6 +154,19 @@ def serve_public(path):
 @app.route("/static/<path:path>")
 def serve_static(path):
     return send_from_directory("static", path)
+
+
+
+@app.route("/api/debug", methods=["GET"])
+def api_debug():
+    base_url = "/".join(API_URL.split("/")[:-2]) if "/v1/" in API_URL else API_URL
+    models_url = f"{base_url}/v1/models"
+    return jsonify({
+        "api_url": API_URL,
+        "base_url": base_url,
+        "models_url": models_url,
+        "env_var": os.getenv("LM_STUDIO_API", "non défini")
+    }), 200
 
 @app.route("/api/generate", methods=["POST"])
 def api_generate():
