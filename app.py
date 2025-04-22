@@ -7,6 +7,8 @@ import jwt
 import uuid
 from datetime import datetime, timedelta
 import logging
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 # Configuration du logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -20,16 +22,43 @@ HTML_INDEX = "index.html"
 CONTENT_TYPE_JSON = "application/json"
 
 # Configurations
-JIRA_BASE_URL = "http://127.0.0.1:1234/v1/chat/completions"
+JIRA_BASE_URL = os.getenv("JIRA_BASE_URL")
 JIRA_EMAIL = os.getenv("JIRA_EMAIL")
 JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN")
 JIRA_PROJECT_KEY = os.getenv("JIRA_PROJECT_KEY")
-API_URL = os.getenv("API_URL")  # URL de l'API LM Studio
+API_URL = "http://127.0.0.1:1234/v1/chat/completions"  # URL directe de l'API LM Studio
 APP_SECRET = os.getenv("APP_SECRET", "your-secret-key")
-
 
 # Pour stocker les installations d'applications
 app_installations = {}
+
+def create_retry_session(retries=3, backoff_factor=0.3):
+    """
+    Crée une session avec retry pour les requêtes HTTP
+    """
+    session = requests.Session()
+    retry = Retry(
+        total=retries,
+        read=retries,
+        connect=retries,
+        backoff_factor=backoff_factor,
+        status_forcelist=(500, 502, 504),
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount('http://', adapter)
+    session.mount('https://', adapter)
+    return session
+
+def check_lm_studio_status():
+    """
+    Vérifie si LM Studio est accessible
+    """
+    try:
+        session = requests.Session()
+        response = session.get(f"{API_URL.rsplit('/', 1)[0]}/models", timeout=5)
+        return response.status_code == 200
+    except:
+        return False
 
 def build_prompt(story_text, format_choice, language="fr"):
     """
@@ -108,8 +137,16 @@ Expected format:
 
 def generate_response(prompt, max_tokens=800):
     """
-    Envoie le prompt au modèle IA local via l'API LM Studio
+    Envoie le prompt au modèle IA local via l'API LM Studio avec une meilleure gestion des erreurs
     """
+    # Vérifier d'abord si LM Studio est accessible
+    if not check_lm_studio_status():
+        logger.error("LM Studio n'est pas accessible")
+        return "Erreur de connexion: LM Studio n'est pas accessible. Vérifiez que le serveur est démarré et fonctionne correctement sur http://127.0.0.1:1234"
+    
+    headers = {
+        "Content-Type": "application/json"
+    }
     payload = {
         "model": "mistral-7b-instruct-v0.3",
         "messages": [{"role": "user", "content": prompt}],
@@ -119,11 +156,22 @@ def generate_response(prompt, max_tokens=800):
 
     try:
         logger.info(f"Envoi de requête à LM Studio: {API_URL}")
-        response = requests.post(API_URL, json=payload, timeout=30)
+        session = create_retry_session(retries=1)  # Réduire le nombre de tentatives pour éviter d'attendre trop longtemps
+        
+        # Augmenter le timeout pour les modèles plus lourds si nécessaire
+        response_timeout = 90
+        
+        response = session.post(API_URL, json=payload, headers=headers, timeout=response_timeout)
         if response.status_code == 200:
             return response.json()["choices"][0]["message"]["content"]
         logger.error(f"Erreur API LM Studio: {response.status_code} - {response.text}")
         return f"Erreur API : {response.status_code} - {response.text}"
+    except requests.exceptions.Timeout:
+        logger.error("LM Studio timeout - le modèle prend trop de temps à répondre")
+        return "Le modèle prend trop de temps à répondre. Essayez avec un prompt plus court ou vérifiez l'état de LM Studio."
+    except requests.exceptions.ConnectionError:
+        logger.error("Erreur de connexion à LM Studio - vérifiez que le serveur est en cours d'exécution")
+        return "Impossible de se connecter à LM Studio. Vérifiez que le serveur est bien démarré sur http://127.0.0.1:1234"
     except Exception as e:
         logger.error(f"Exception lors de l'appel à LM Studio: {str(e)}")
         return f"Erreur LM Studio : {str(e)}"
@@ -221,7 +269,8 @@ def send_jira_request(base_url, task_title, description):
     }
     auth = (JIRA_EMAIL, JIRA_API_TOKEN)
     
-    response = requests.post(url, json=payload, headers=headers, auth=auth, timeout=10)
+    session = create_retry_session()
+    response = session.post(url, json=payload, headers=headers, auth=auth, timeout=10)
     response.raise_for_status()
     return response.json()
 
@@ -278,7 +327,8 @@ def get_issue():
 
     try:
         logger.info(f"Récupération de l'issue Jira: {issue_key}")
-        res = requests.get(url, headers=headers, auth=auth, timeout=10)
+        session = create_retry_session()
+        res = session.get(url, headers=headers, auth=auth, timeout=10)
         res.raise_for_status()
         data = res.json()
         
@@ -413,12 +463,24 @@ def add_comment():
     auth = (JIRA_EMAIL, JIRA_API_TOKEN)
     
     try:
-        response = requests.post(url, json=comment_body, headers=headers, auth=auth, timeout=10)
+        session = create_retry_session()
+        response = session.post(url, json=comment_body, headers=headers, auth=auth, timeout=10)
         response.raise_for_status()
         return jsonify({"message": "Commentaire ajouté avec succès"}), 200
     except requests.exceptions.RequestException as e:
         logger.error(f"Erreur lors de l'ajout du commentaire : {str(e)}")
         return jsonify({"error": str(e)}), 500
+
+@app.route("/api/check-lm-studio", methods=["GET"])
+def check_lm_studio():
+    """
+    Endpoint pour vérifier si LM Studio est accessible
+    """
+    is_available = check_lm_studio_status()
+    return jsonify({
+        "status": "up" if is_available else "down",
+        "message": "LM Studio est accessible" if is_available else "LM Studio n'est pas accessible"
+    })
 
 if __name__ == "__main__":
     app.run(debug=True)
