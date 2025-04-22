@@ -23,7 +23,7 @@ JIRA_BASE_URL = os.getenv("JIRA_BASE_URL")
 JIRA_EMAIL = os.getenv("JIRA_EMAIL")
 JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN")
 JIRA_PROJECT_KEY = os.getenv("JIRA_PROJECT_KEY")
-API_URL = os.getenv("LM_STUDIO_API", "http://127.0.0.1:1234/v1/chat/completions")  # Modifiable par variable d'env
+API_URL = os.getenv("API_URL", "https://abraham-certification-memories-cl.trycloudflare.com/v1/chat/completions")  # Modifiable par variable d'env
 APP_SECRET = os.getenv("APP_SECRET", "your-secret-key")
 
 # Session HTTP avec retry
