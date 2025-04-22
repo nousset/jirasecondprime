@@ -5,8 +5,15 @@ services:
     buildCommand: ""
     startCommand: gunicorn app:app
     envVars:
-     envVars:
-  - key: PORT
-    value: 10000
-  - key: API_URL
-    value: https://abraham-certification-memories-cl.trycloudflare.com/v1/chat/completions
+      - key: PORT
+        value: 10000
+      - key: JIRA_BASE_URL
+        value: amaniconsulting.atlassian.net
+      - key: JIRA_EMAIL
+        value: hermann.glan@amani.consulting
+      - key: JIRA_PROJECT_KEY
+        value: ACD
+      - key: API_URL
+        value: https://abraham-certification-memories-cl.trycloudflare.com
+      - key: JIRA_API_TOKEN
+        sync: false  # Vous devrez ajouter cette variable manuellement dans l'interface Render

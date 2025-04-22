@@ -113,6 +113,22 @@
             margin-top: 10px;
         }
         
+        .warning-message {
+            color: #974F0C;
+            background-color: #FFF7D6;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        
+        .info-message {
+            color: #0747A6;
+            background-color: #DEEBFF;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        
         .action-buttons {
             margin-top: 15px;
             display: flex;
@@ -123,6 +139,29 @@
             font-weight: 500;
             color: #172b4d;
         }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .status-indicator i {
+            margin-right: 8px;
+        }
+
+        .status-online {
+            background-color: #E3FCEF;
+            color: #006644;
+        }
+
+        .status-offline {
+            background-color: #FFEBE6;
+            color: #DE350B;
+        }
     </style>
 </head>
 <body>
@@ -131,6 +170,11 @@
             <i class="fas fa-vial me-2"></i>
             Générateur de Cas de Test pour JIRA
         </h1>
+        
+        <div id="statusIndicator" class="status-indicator" style="display: none;">
+            <i class="fas fa-circle"></i>
+            <span id="statusText">Vérification de la connexion...</span>
+        </div>
         
         <div class="row">
             <div class="col-md-6">
@@ -178,7 +222,7 @@
                                 </div>
                             </div>
                             
-                            <button type="submit" class="btn btn-primary w-100">
+                            <button type="submit" class="btn btn-primary w-100" id="generateBtn">
                                 <i class="fas fa-magic me-2"></i>
                                 Générer les cas de test
                             </button>
@@ -233,10 +277,45 @@
             const createJiraBtn = document.getElementById('createJiraBtn');
             const addCommentBtn = document.getElementById('addCommentBtn');
             const messageContainer = document.getElementById('messageContainer');
+            const statusIndicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+            const generateBtn = document.getElementById('generateBtn');
             
             // Variables pour stocker les informations de contexte JIRA
             const issueKey = '{{ issue_key }}';
             const clientKey = '{{ client_key }}';
+            
+            // Vérifier l'état de la connexion au démarrage
+            checkApiStatus();
+            
+            // Vérifier périodiquement l'état de la connexion (toutes les 30 secondes)
+            setInterval(checkApiStatus, 30000);
+            
+            function checkApiStatus() {
+                statusIndicator.style.display = 'flex';
+                statusText.textContent = 'Vérification de la connexion...';
+                
+                fetch('/api/status')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status.includes('disponible')) {
+                            statusIndicator.className = 'status-indicator status-online';
+                            statusText.innerHTML = `<i class="fas fa-check-circle"></i> API LM Studio connectée`;
+                            generateBtn.disabled = false;
+                        } else {
+                            statusIndicator.className = 'status-indicator status-offline';
+                            statusText.innerHTML = `<i class="fas fa-exclamation-triangle"></i> API LM Studio non disponible`;
+                            generateBtn.disabled = true;
+                            showMessage(`L'API n'est pas accessible actuellement. Veuillez réessayer plus tard.`, 'error');
+                        }
+                    })
+                    .catch(error => {
+                        statusIndicator.className = 'status-indicator status-offline';
+                        statusText.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Erreur de connexion à l'API`;
+                        generateBtn.disabled = true;
+                        showMessage('Impossible de vérifier l\'état de l\'API', 'error');
+                    });
+            }
             
             // Masquer le bouton de commentaire si nous ne sommes pas dans le contexte d'une issue
             if (!issueKey) {
@@ -246,7 +325,12 @@
             // Fonction pour récupérer le contenu de l'issue si une clé d'issue est fournie
             if (issueKey) {
                 fetch(`/get-issue?key=${issueKey}&clientKey=${clientKey}`)
-                    .then(response => response.json())
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`Erreur HTTP: ${response.status}`);
+                        }
+                        return response.json();
+                    })
                     .then(data => {
                         if (data.summary || data.description) {
                             const userStoryInput = document.getElementById('user_story');
@@ -255,6 +339,7 @@
                     })
                     .catch(error => {
                         console.error('Erreur lors de la récupération de l\'issue:', error);
+                        showMessage(`Erreur lors de la récupération de l'issue: ${error.message}`, 'warning');
                     });
             }
             
@@ -276,6 +361,10 @@
                 resultCard.style.display = 'none';
                 messageContainer.innerHTML = '';
                 
+                // Créer un contrôleur d'abandon pour le timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minutes de timeout
+                
                 // Envoyer la requête à l'API
                 fetch('/api/generate', {
                     method: 'POST',
@@ -286,9 +375,15 @@
                         story: userStory,
                         format: formatChoice,
                         language: languageChoice
-                    })
+                    }),
+                    signal: controller.signal
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Erreur HTTP: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     // Masquer l'indicateur de chargement
                     loadingIndicator.style.display = 'none';
@@ -301,11 +396,26 @@
                     // Afficher les résultats
                     testCasesOutput.textContent = data.result;
                     resultCard.style.display = 'block';
+                    showMessage('Cas de test générés avec succès!', 'success');
                 })
                 .catch(error => {
                     loadingIndicator.style.display = 'none';
-                    showMessage('Une erreur est survenue lors de la génération des cas de test.', 'error');
+                    
+                    if (error.name === 'AbortError') {
+                        showMessage('La génération a pris trop de temps. Le serveur est peut-être surchargé, veuillez réessayer.', 'error');
+                    } else if (error.message.includes('Failed to fetch')) {
+                        showMessage('Impossible de se connecter au serveur. Vérifiez votre connexion internet ou réessayez plus tard.', 'error');
+                    } else {
+                        showMessage(`Erreur: ${error.message}`, 'error');
+                    }
+                    
                     console.error('Erreur:', error);
+                    
+                    // Vérifier l'état de l'API après une erreur
+                    checkApiStatus();
+                })
+                .finally(() => {
+                    clearTimeout(timeoutId);
                 });
             });
             
@@ -337,6 +447,10 @@
                 loadingIndicator.style.display = 'block';
                 messageContainer.innerHTML = '';
                 
+                // Timeout pour la requête JIRA
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 secondes de timeout
+                
                 // Envoyer la requête à l'API
                 fetch('/api/create-task', {
                     method: 'POST',
@@ -349,9 +463,15 @@
                         format: formatChoice,
                         language: languageChoice,
                         clientKey: clientKey
-                    })
+                    }),
+                    signal: controller.signal
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Erreur HTTP: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     // Masquer l'indicateur de chargement
                     loadingIndicator.style.display = 'none';
@@ -374,8 +494,17 @@
                 })
                 .catch(error => {
                     loadingIndicator.style.display = 'none';
-                    showMessage('Une erreur est survenue lors de la création de la tâche JIRA.', 'error');
+                    
+                    if (error.name === 'AbortError') {
+                        showMessage('La création de la tâche a pris trop de temps. Veuillez réessayer.', 'error');
+                    } else {
+                        showMessage(`Erreur lors de la création de la tâche JIRA: ${error.message}`, 'error');
+                    }
+                    
                     console.error('Erreur:', error);
+                })
+                .finally(() => {
+                    clearTimeout(timeoutId);
                 });
             });
             
@@ -392,6 +521,10 @@
                 loadingIndicator.style.display = 'block';
                 messageContainer.innerHTML = '';
                 
+                // Timeout pour la requête
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 secondes
+                
                 // Envoyer la requête à l'API
                 fetch('/api/add-comment', {
                     method: 'POST',
@@ -402,9 +535,15 @@
                         issueKey: issueKey,
                         comment: testCases,
                         clientKey: clientKey
-                    })
+                    }),
+                    signal: controller.signal
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Erreur HTTP: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     // Masquer l'indicateur de chargement
                     loadingIndicator.style.display = 'none';
@@ -419,15 +558,35 @@
                 })
                 .catch(error => {
                     loadingIndicator.style.display = 'none';
-                    showMessage('Une erreur est survenue lors de l\'ajout du commentaire.', 'error');
+                    
+                    if (error.name === 'AbortError') {
+                        showMessage('L\'ajout du commentaire a pris trop de temps. Veuillez réessayer.', 'error');
+                    } else {
+                        showMessage(`Erreur lors de l'ajout du commentaire: ${error.message}`, 'error');
+                    }
+                    
                     console.error('Erreur:', error);
+                })
+                .finally(() => {
+                    clearTimeout(timeoutId);
                 });
             });
             
             // Fonction pour afficher des messages
             function showMessage(message, type) {
-                const messageClass = type === 'error' ? 'error-message' : 'success-message';
-                messageContainer.innerHTML = `<div class="${messageClass}">${message}</div>`;
+                const messageClass = type === 'error' ? 'error-message' : 
+                                    type === 'success' ? 'success-message' :
+                                    type === 'warning' ? 'warning-message' : 'info-message';
+                                    
+                messageContainer.innerHTML = `<div class="${messageClass}">
+                    <i class="fas ${type === 'error' ? 'fa-exclamation-circle' : 
+                                    type === 'success' ? 'fa-check-circle' :
+                                    type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'}"></i>
+                    ${message}
+                </div>`;
+                
+                // Scroll jusqu'au message
+                messageContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
         });
     </script>

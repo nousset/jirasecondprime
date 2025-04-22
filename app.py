@@ -23,7 +23,7 @@ JIRA_BASE_URL = os.getenv("JIRA_BASE_URL")
 JIRA_EMAIL = os.getenv("JIRA_EMAIL")
 JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN")
 JIRA_PROJECT_KEY = os.getenv("JIRA_PROJECT_KEY")
-API_URL = os.getenv("API_URL", "https://abraham-certification-memories-cl.trycloudflare.com/v1/chat/completions")  # Modifiable par variable d'env
+API_URL = os.getenv("API_URL", "https://abraham-certification-memories-cl.trycloudflare.com")  # Modifiable par variable d'env
 APP_SECRET = os.getenv("APP_SECRET", "your-secret-key")
 
 # Session HTTP avec retry
@@ -41,10 +41,40 @@ def create_retry_session(retries=3, backoff_factor=0.3):
     session.mount('https://', adapter)
     return session
 
-# Vérification de l’état de LM Studio
+# Vérification réelle de l'état de LM Studio
 def check_lm_studio_status():
-    # Supposer que le serveur est disponible
-    return True
+    try:
+        # Essayer plusieurs formats d'URL possibles
+        endpoints = [
+            f"{API_URL}/v1/models",
+            f"{API_URL}/models",
+        ]
+        
+        if API_URL.endswith('/'):
+            endpoints = [
+                f"{API_URL}v1/models",
+                f"{API_URL}models",
+            ]
+        
+        session = create_retry_session(retries=1)
+        
+        for endpoint in endpoints:
+            try:
+                logger.info(f"Vérification disponibilité LM Studio sur: {endpoint}")
+                response = session.get(endpoint, timeout=5)
+                if response.status_code == 200:
+                    logger.info(f"LM Studio disponible sur: {endpoint}")
+                    return True
+            except Exception as e:
+                logger.warning(f"Échec vérification sur {endpoint}: {e}")
+                continue
+                
+        logger.error("LM Studio n'est pas accessible sur aucun endpoint")
+        return False
+    except Exception as e:
+        logger.error(f"Erreur lors de la vérification de LM Studio: {e}")
+        return False
+
 # Construction du prompt
 def build_prompt(story_text, format_choice, language="fr"):
     if language == "fr":
@@ -110,10 +140,11 @@ Expected format:
 
 # Envoi du prompt à LM Studio
 def generate_response(prompt, max_tokens=800):
+    # Vérification réelle de la disponibilité
     if not check_lm_studio_status():
         logger.error("LM Studio n'est pas accessible")
-        return "Erreur de connexion : LM Studio n'est pas accessible."
-
+        return "Erreur de connexion : LM Studio n'est pas accessible. Vérifiez la configuration de CloudFlare."
+    
     headers = {"Content-Type": "application/json"}
     payload = {
         "model": "mistral-7b-instruct-v0.3",
@@ -121,17 +152,46 @@ def generate_response(prompt, max_tokens=800):
         "max_tokens": max_tokens,
         "temperature": 0.7
     }
-
-    try:
-        session = create_retry_session(retries=1)
-        response = session.post(API_URL, json=payload, headers=headers, timeout=90)
-        response.raise_for_status()
-        return response.json()["choices"][0]["message"]["content"]
-    except requests.exceptions.Timeout:
-        return "Timeout : le modèle met trop de temps à répondre."
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Erreur requête LM Studio : {e}")
-        return f"Erreur : {str(e)}"
+    
+    # Liste des endpoints possibles à essayer
+    endpoints = []
+    if not API_URL.endswith('/'):
+        endpoints = [
+            f"{API_URL}/v1/chat/completions",
+            f"{API_URL}/chat/completions"
+        ]
+    else:
+        endpoints = [
+            f"{API_URL}v1/chat/completions",
+            f"{API_URL}chat/completions"
+        ]
+    
+    session = create_retry_session(retries=1)
+    last_error = None
+    
+    # Essai de chaque endpoint
+    for api_endpoint in endpoints:
+        try:
+            logger.info(f"Envoi requête à: {api_endpoint}")
+            response = session.post(api_endpoint, json=payload, headers=headers, timeout=90)
+            
+            # Log pour debug
+            logger.info(f"Statut réponse: {response.status_code}")
+            if response.status_code != 200:
+                logger.error(f"Réponse: {response.text}")
+                continue  # Essayer l'endpoint suivant
+                
+            response.raise_for_status()
+            return response.json()["choices"][0]["message"]["content"]
+        except Exception as e:
+            logger.warning(f"Erreur avec endpoint {api_endpoint}: {e}")
+            last_error = e
+            continue  # Essayer l'endpoint suivant
+    
+    # Si on arrive ici, aucun endpoint n'a fonctionné
+    error_message = f"Erreur API: Aucun endpoint n'a fonctionné. Dernière erreur: {last_error}"
+    logger.error(error_message)
+    return error_message
 
 @app.route("/")
 def home():
@@ -159,12 +219,52 @@ def api_generate():
     generated = generate_response(prompt)
     return jsonify({"result": generated})
 
-# Endpoint test pour vérifier LM Studio
+# Endpoint test pour vérifier LM Studio avec détails
 @app.route("/api/status", methods=["GET"])
 def api_status():
     if check_lm_studio_status():
-        return jsonify({"status": "LM Studio disponible"}), 200
-    return jsonify({"status": "LM Studio non disponible"}), 503
+        return jsonify({"status": "LM Studio disponible", "api_url": API_URL}), 200
+    return jsonify({"status": "LM Studio non disponible", "api_url": API_URL}), 503
+
+# Endpoint de diagnostic pour vérifier les différentes configurations
+@app.route("/api/diagnostic", methods=["GET"])
+def api_diagnostic():
+    results = {
+        "api_url": API_URL,
+        "endpoints_tested": [],
+        "configuration": {
+            "api_url_ends_with_slash": API_URL.endswith('/')
+        }
+    }
+    
+    # Tester différents endpoints
+    endpoints = [
+        {"name": "v1/models", "url": f"{API_URL}/v1/models" if not API_URL.endswith('/') else f"{API_URL}v1/models"},
+        {"name": "models", "url": f"{API_URL}/models" if not API_URL.endswith('/') else f"{API_URL}models"},
+        {"name": "v1/chat/completions", "url": f"{API_URL}/v1/chat/completions" if not API_URL.endswith('/') else f"{API_URL}v1/chat/completions"},
+        {"name": "chat/completions", "url": f"{API_URL}/chat/completions" if not API_URL.endswith('/') else f"{API_URL}chat/completions"},
+    ]
+    
+    session = create_retry_session(retries=1)
+    
+    for endpoint in endpoints:
+        try:
+            response = session.get(endpoint["url"], timeout=5)
+            results["endpoints_tested"].append({
+                "name": endpoint["name"],
+                "url": endpoint["url"],
+                "status_code": response.status_code,
+                "working": response.status_code < 500  # Même un 404 est "working" car le serveur répond
+            })
+        except Exception as e:
+            results["endpoints_tested"].append({
+                "name": endpoint["name"],
+                "url": endpoint["url"],
+                "error": str(e),
+                "working": False
+            })
+    
+    return jsonify(results)
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
