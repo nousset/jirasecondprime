@@ -27,7 +27,7 @@ JIRA_EMAIL = os.getenv("JIRA_EMAIL", "")
 JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN", "")
 JIRA_PROJECT_KEY = os.getenv("JIRA_PROJECT_KEY", "")
 # Correction: Utilisation d'une URL de fallback locale si la variable d'environnement n'est pas définie
-LM_STUDIO_BASE_URL = os.getenv("LM_STUDIO_API", "https://cookbook-actively-specially-grove.trycloudflare.com")
+LM_STUDIO_BASE_URL = os.getenv("LM_STUDIO_API", "https://destruction-annie-bed-diamond.trycloudflare.com")
 APP_SECRET = os.getenv("APP_SECRET", "your-secret-key")
 
 # URLs pour les APIs LM Studio
@@ -64,7 +64,7 @@ def check_lm_studio_status(force=False):
     Vérifie si LM Studio est disponible en interrogeant l'API des modèles.
     Utilise un cache pour éviter des vérifications trop fréquentes.
     """
-    global lm_studio_status
+    global lm_studio_status, DEFAULT_MODEL  # Déclarer DEFAULT_MODEL comme global ici, au début
     current_time = time.time()
     
     # Si une vérification a été faite récemment et qu'on ne force pas, utiliser la valeur en cache
@@ -97,8 +97,7 @@ def check_lm_studio_status(force=False):
                         # Si notre modèle par défaut n'est pas disponible, utiliser le premier modèle disponible
                         if DEFAULT_MODEL not in model_ids:
                             logger.warning(f"Le modèle par défaut {DEFAULT_MODEL} n'est pas disponible, utilisation de {model_ids[0]}")
-                            # Mettre à jour la variable globale
-                            global DEFAULT_MODEL
+                            # Maintenant on peut modifier la variable globale
                             DEFAULT_MODEL = model_ids[0]
                     else:
                         logger.warning("Aucun modèle disponible")
