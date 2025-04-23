@@ -27,7 +27,7 @@ JIRA_EMAIL = os.getenv("JIRA_EMAIL", "")
 JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN", "")
 JIRA_PROJECT_KEY = os.getenv("JIRA_PROJECT_KEY", "")
 # Correction: Utilisation d'une URL de fallback locale si la variable d'environnement n'est pas définie
-LM_STUDIO_BASE_URL = os.getenv("LM_STUDIO_API", "http://localhost:1234")
+LM_STUDIO_BASE_URL = os.getenv("LM_STUDIO_API", "https://cookbook-actively-specially-grove.trycloudflare.com")
 APP_SECRET = os.getenv("APP_SECRET", "your-secret-key")
 
 # URLs pour les APIs LM Studio
