@@ -3,7 +3,8 @@ services:
     name: jirasecondprime
     env: python
     buildCommand: ""
-    startCommand: gunicorn app:app
+    startCommand: gunicorn app:app --timeout 180 --bind 0.0.0.0:$PORT
+
     envVars:
       - key: PORT
         value: 10000
