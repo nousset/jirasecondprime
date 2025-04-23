@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Générateur de Cas de Test pour JIRA</title>
+    <title>Générateur de Cas de Test avec LM Studio</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -67,6 +67,16 @@
             border-color: #2ea06e;
         }
         
+        .btn-danger {
+            background-color: #de350b;
+            border-color: #de350b;
+        }
+        
+        .btn-danger:hover {
+            background-color: #bf2e0a;
+            border-color: #bf2e0a;
+        }
+        
         .result-container {
             margin-top: 20px;
             padding: 15px;
@@ -113,6 +123,22 @@
             margin-top: 10px;
         }
         
+        .warning-message {
+            color: #974F0C;
+            background-color: #FFF7D6;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        
+        .info-message {
+            color: #0747A6;
+            background-color: #DEEBFF;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        
         .action-buttons {
             margin-top: 15px;
             display: flex;
@@ -123,14 +149,58 @@
             font-weight: 500;
             color: #172b4d;
         }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .status-indicator i {
+            margin-right: 8px;
+        }
+
+        .status-online {
+            background-color: #E3FCEF;
+            color: #006644;
+        }
+
+        .status-offline {
+            background-color: #FFEBE6;
+            color: #DE350B;
+        }
+        
+        .model-selector {
+            margin-bottom: 15px;
+        }
+        
+        .debug-info {
+            font-size: 12px;
+            color: #6B778C;
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #dfe1e6;
+        }
+        
+        .reset-button {
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>
             <i class="fas fa-vial me-2"></i>
-            Générateur de Cas de Test pour JIRA
+            Générateur de Cas de Test avec LM Studio
         </h1>
+        
+        <div id="statusIndicator" class="status-indicator" style="display: none;">
+            <i class="fas fa-circle"></i>
+            <span id="statusText">Vérification de la connexion...</span>
+        </div>
         
         <div class="row">
             <div class="col-md-6">
@@ -143,7 +213,7 @@
                         <form id="testGenForm">
                             <div class="mb-3">
                                 <label for="user_story" class="form-label">Saisissez votre user story</label>
-                                <textarea class="form-control" id="user_story" name="user_story" rows="5" required></textarea>
+                                <textarea class="form-control" id="user_story" name="user_story" rows="5" placeholder="En tant qu'utilisateur, je souhaite..." required></textarea>
                             </div>
                             
                             <div class="mb-3">
@@ -178,11 +248,35 @@
                                 </div>
                             </div>
                             
-                            <button type="submit" class="btn btn-primary w-100">
+                            <div class="mb-3 model-selector">
+                                <label for="model-selection" class="form-label">Modèle LM Studio</label>
+                                <select class="form-select" id="modelSelect" name="model">
+                                    <option value="" selected>Chargement des modèles...</option>
+                                </select>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary w-100" id="generateBtn">
                                 <i class="fas fa-magic me-2"></i>
                                 Générer les cas de test
                             </button>
                         </form>
+                    </div>
+                </div>
+                
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <i class="fas fa-cog me-2"></i>
+                        Paramètres
+                    </div>
+                    <div class="card-body">
+                        <button class="btn btn-secondary w-100 mb-2" id="checkStatusBtn">
+                            <i class="fas fa-sync-alt me-2"></i>
+                            Vérifier la connexion
+                        </button>
+                        <button class="btn btn-danger w-100 reset-button" id="resetConnectionBtn">
+                            <i class="fas fa-power-off me-2"></i>
+                            Réinitialiser la connexion
+                        </button>
                     </div>
                 </div>
             </div>
@@ -201,14 +295,6 @@
                                 <i class="fas fa-copy me-2"></i>
                                 Copier
                             </button>
-                            <button class="btn btn-success" id="createJiraBtn">
-                                <i class="fab fa-jira me-2"></i>
-                                Créer une tâche dans JIRA
-                            </button>
-                            <button class="btn btn-primary" id="addCommentBtn">
-                                <i class="fas fa-comment me-2"></i>
-                                Ajouter comme commentaire
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -221,6 +307,11 @@
                 <div id="messageContainer"></div>
             </div>
         </div>
+        
+        <div class="debug-info" id="debugInfo" style="display: none;">
+            <h5>Informations de débogage</h5>
+            <pre id="debugContent"></pre>
+        </div>
     </div>
     
     <script>
@@ -230,32 +321,130 @@
             const resultCard = document.getElementById('resultCard');
             const testCasesOutput = document.getElementById('testCasesOutput');
             const copyBtn = document.getElementById('copyBtn');
-            const createJiraBtn = document.getElementById('createJiraBtn');
-            const addCommentBtn = document.getElementById('addCommentBtn');
             const messageContainer = document.getElementById('messageContainer');
+            const statusIndicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+            const generateBtn = document.getElementById('generateBtn');
+            const modelSelect = document.getElementById('modelSelect');
+            const checkStatusBtn = document.getElementById('checkStatusBtn');
+            const resetConnectionBtn = document.getElementById('resetConnectionBtn');
+            const debugInfo = document.getElementById('debugInfo');
+            const debugContent = document.getElementById('debugContent');
             
-            // Variables pour stocker les informations de contexte JIRA
-            const issueKey = '{{ issue_key }}';
-            const clientKey = '{{ client_key }}';
+            // Vérifier l'état de la connexion au démarrage
+            checkApiStatus();
             
-            // Masquer le bouton de commentaire si nous ne sommes pas dans le contexte d'une issue
-            if (!issueKey) {
-                addCommentBtn.style.display = 'none';
-            }
+            // Charger les modèles disponibles
+            loadModels();
             
-            // Fonction pour récupérer le contenu de l'issue si une clé d'issue est fournie
-            if (issueKey) {
-                fetch(`/get-issue?key=${issueKey}&clientKey=${clientKey}`)
+            // Gérer le bouton de vérification de status
+            checkStatusBtn.addEventListener('click', function() {
+                checkApiStatus();
+                loadModels();
+            });
+            
+            // Gérer le bouton de réinitialisation de connexion
+            resetConnectionBtn.addEventListener('click', function() {
+                resetConnection();
+            });
+            
+            function checkApiStatus() {
+                statusIndicator.style.display = 'flex';
+                statusText.textContent = 'Vérification de la connexion...';
+                
+                fetch('/api/status')
                     .then(response => response.json())
                     .then(data => {
-                        if (data.summary || data.description) {
-                            const userStoryInput = document.getElementById('user_story');
-                            userStoryInput.value = data.description || data.summary;
+                        if (data.status.includes('disponible')) {
+                            statusIndicator.className = 'status-indicator status-online';
+                            statusText.innerHTML = `<i class="fas fa-check-circle"></i> LM Studio connecté (${data.default_model})`;
+                            generateBtn.disabled = false;
+                        } else {
+                            statusIndicator.className = 'status-indicator status-offline';
+                            statusText.innerHTML = `<i class="fas fa-exclamation-triangle"></i> LM Studio non disponible`;
+                            generateBtn.disabled = true;
+                            showMessage(`L'API LM Studio n'est pas accessible actuellement. Veuillez démarrer LM Studio et vérifier que le serveur API est actif.`, 'error');
                         }
                     })
                     .catch(error => {
-                        console.error('Erreur lors de la récupération de l\'issue:', error);
+                        statusIndicator.className = 'status-indicator status-offline';
+                        statusText.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Erreur de connexion à l'API`;
+                        generateBtn.disabled = true;
+                        showMessage('Impossible de vérifier l\'état de l\'API', 'error');
                     });
+            }
+            
+            function loadModels() {
+                fetch('/api/models')
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`Erreur HTTP: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        // Vider le sélecteur de modèles
+                        modelSelect.innerHTML = '';
+                        
+                        if (data.data && data.data.length > 0) {
+                            // Parcourir les modèles disponibles
+                            data.data.forEach(model => {
+                                const option = document.createElement('option');
+                                option.value = model.id;
+                                option.textContent = model.id;
+                                
+                                // Sélectionner par défaut le modèle par défaut
+                                if (model.id === data.default_model) {
+                                    option.selected = true;
+                                }
+                                
+                                modelSelect.appendChild(option);
+                            });
+                            
+                            showMessage(`${data.data.length} modèles disponibles`, 'info');
+                        } else {
+                            const option = document.createElement('option');
+                            option.value = "";
+                            option.textContent = "Aucun modèle disponible";
+                            modelSelect.appendChild(option);
+                            
+                            showMessage('Aucun modèle disponible dans LM Studio', 'warning');
+                        }
+                    })
+                    .catch(error => {
+                        const option = document.createElement('option');
+                        option.value = "";
+                        option.textContent = "Erreur de chargement";
+                        modelSelect.innerHTML = '';
+                        modelSelect.appendChild(option);
+                        
+                        console.error('Erreur lors du chargement des modèles:', error);
+                        showMessage('Erreur lors du chargement des modèles', 'error');
+                    });
+            }
+            
+            function resetConnection() {
+                showMessage('Réinitialisation de la connexion à LM Studio...', 'info');
+                
+                fetch('/api/reset_connection', {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status) {
+                        showMessage('Connexion réinitialisée avec succès', 'success');
+                    } else {
+                        showMessage('Échec de la réinitialisation', 'error');
+                    }
+                    
+                    // Actualiser l'état et les modèles
+                    checkApiStatus();
+                    loadModels();
+                })
+                .catch(error => {
+                    showMessage('Erreur lors de la réinitialisation', 'error');
+                    console.error('Erreur:', error);
+                });
             }
             
             // Gérer la soumission du formulaire
@@ -270,11 +459,21 @@
                 
                 const formatChoice = document.querySelector('input[name="format"]:checked').value;
                 const languageChoice = document.querySelector('input[name="language"]:checked').value;
+                const modelChoice = modelSelect.value;
+                
+                if (!modelChoice) {
+                    showMessage('Veuillez sélectionner un modèle.', 'error');
+                    return;
+                }
                 
                 // Afficher l'indicateur de chargement
                 loadingIndicator.style.display = 'block';
                 resultCard.style.display = 'none';
                 messageContainer.innerHTML = '';
+                
+                // Créer un contrôleur d'abandon pour le timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minutes de timeout
                 
                 // Envoyer la requête à l'API
                 fetch('/api/generate', {
@@ -285,10 +484,17 @@
                     body: JSON.stringify({
                         story: userStory,
                         format: formatChoice,
-                        language: languageChoice
-                    })
+                        language: languageChoice,
+                        model: modelChoice
+                    }),
+                    signal: controller.signal
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Erreur HTTP: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     // Masquer l'indicateur de chargement
                     loadingIndicator.style.display = 'none';
@@ -301,11 +507,26 @@
                     // Afficher les résultats
                     testCasesOutput.textContent = data.result;
                     resultCard.style.display = 'block';
+                    showMessage('Cas de test générés avec succès!', 'success');
                 })
                 .catch(error => {
                     loadingIndicator.style.display = 'none';
-                    showMessage('Une erreur est survenue lors de la génération des cas de test.', 'error');
+                    
+                    if (error.name === 'AbortError') {
+                        showMessage('La génération a pris trop de temps. Le serveur est peut-être surchargé, veuillez réessayer.', 'error');
+                    } else if (error.message.includes('Failed to fetch')) {
+                        showMessage('Impossible de se connecter au serveur. Vérifiez votre connexion internet ou réessayez plus tard.', 'error');
+                    } else {
+                        showMessage(`Erreur: ${error.message}`, 'error');
+                    }
+                    
                     console.error('Erreur:', error);
+                    
+                    // Vérifier l'état de l'API après une erreur
+                    checkApiStatus();
+                })
+                .finally(() => {
+                    clearTimeout(timeoutId);
                 });
             });
             
@@ -321,113 +542,37 @@
                     });
             });
             
-            // Créer une tâche dans JIRA
-            createJiraBtn.addEventListener('click', function() {
-                const userStory = document.getElementById('user_story').value.trim();
-                const testCases = testCasesOutput.textContent;
-                const formatChoice = document.querySelector('input[name="format"]:checked').value;
-                const languageChoice = document.querySelector('input[name="language"]:checked').value;
-                
-                if (!userStory || !testCases) {
-                    showMessage('Aucun contenu à envoyer.', 'error');
-                    return;
+            // Afficher les informations de débogage
+            document.addEventListener('keydown', function(e) {
+                // Activer le mode debug avec Ctrl+Alt+D
+                if (e.ctrlKey && e.altKey && e.key === 'd') {
+                    fetch('/api/debug')
+                        .then(response => response.json())
+                        .then(data => {
+                            debugContent.textContent = JSON.stringify(data, null, 2);
+                            debugInfo.style.display = 'block';
+                        })
+                        .catch(error => {
+                            console.error('Erreur debug:', error);
+                        });
                 }
-                
-                // Afficher l'indicateur de chargement
-                loadingIndicator.style.display = 'block';
-                messageContainer.innerHTML = '';
-                
-                // Envoyer la requête à l'API
-                fetch('/api/create-task', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        story: userStory,
-                        testCases: testCases,
-                        format: formatChoice,
-                        language: languageChoice,
-                        clientKey: clientKey
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    // Masquer l'indicateur de chargement
-                    loadingIndicator.style.display = 'none';
-                    
-                    if (data.error) {
-                        showMessage(data.error, 'error');
-                        return;
-                    }
-                    
-                    // Afficher un message de succès avec un lien vers la tâche créée
-                    const taskKey = data.key || 'N/A';
-                    const successMessage = `
-                        <div class="success-message">
-                            <strong>Tâche créée avec succès!</strong><br>
-                            Identifiant: ${taskKey}<br>
-                            <a href="/browse/${taskKey}" target="_blank">Ouvrir dans JIRA</a>
-                        </div>
-                    `;
-                    messageContainer.innerHTML = successMessage;
-                })
-                .catch(error => {
-                    loadingIndicator.style.display = 'none';
-                    showMessage('Une erreur est survenue lors de la création de la tâche JIRA.', 'error');
-                    console.error('Erreur:', error);
-                });
-            });
-            
-            // Ajouter comme commentaire à l'issue JIRA
-            addCommentBtn.addEventListener('click', function() {
-                const testCases = testCasesOutput.textContent;
-                
-                if (!testCases) {
-                    showMessage('Aucun contenu à envoyer.', 'error');
-                    return;
-                }
-                
-                // Afficher l'indicateur de chargement
-                loadingIndicator.style.display = 'block';
-                messageContainer.innerHTML = '';
-                
-                // Envoyer la requête à l'API
-                fetch('/api/add-comment', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        issueKey: issueKey,
-                        comment: testCases,
-                        clientKey: clientKey
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    // Masquer l'indicateur de chargement
-                    loadingIndicator.style.display = 'none';
-                    
-                    if (data.error) {
-                        showMessage(data.error, 'error');
-                        return;
-                    }
-                    
-                    // Afficher un message de succès
-                    showMessage('Commentaire ajouté avec succès à l\'issue ' + issueKey, 'success');
-                })
-                .catch(error => {
-                    loadingIndicator.style.display = 'none';
-                    showMessage('Une erreur est survenue lors de l\'ajout du commentaire.', 'error');
-                    console.error('Erreur:', error);
-                });
             });
             
             // Fonction pour afficher des messages
             function showMessage(message, type) {
-                const messageClass = type === 'error' ? 'error-message' : 'success-message';
-                messageContainer.innerHTML = `<div class="${messageClass}">${message}</div>`;
+                const messageClass = type === 'error' ? 'error-message' : 
+                                    type === 'success' ? 'success-message' :
+                                    type === 'warning' ? 'warning-message' : 'info-message';
+                                    
+                messageContainer.innerHTML = `<div class="${messageClass}">
+                    <i class="fas ${type === 'error' ? 'fa-exclamation-circle' : 
+                                    type === 'success' ? 'fa-check-circle' :
+                                    type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'}"></i>
+                    ${message}
+                </div>`;
+                
+                // Scroll jusqu'au message
+                messageContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
         });
     </script>

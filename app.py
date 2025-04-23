@@ -21,12 +21,13 @@ HTML_INDEX = "index.html"
 CONTENT_TYPE_JSON = "application/json"
 DEFAULT_MODEL = "mistral-7b-instruct-v0.3"
 
-# Configuration des variables d'environnement
-JIRA_BASE_URL = os.getenv("JIRA_BASE_URL")
-JIRA_EMAIL = os.getenv("JIRA_EMAIL")
-JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN")
-JIRA_PROJECT_KEY = os.getenv("JIRA_PROJECT_KEY")
-LM_STUDIO_BASE_URL = os.getenv("LM_STUDIO_API", "https://ventures-zu-richards-descriptions.trycloudflare.com")
+# Configuration des variables d'environnement avec valeurs par défaut
+JIRA_BASE_URL = os.getenv("JIRA_BASE_URL", "")
+JIRA_EMAIL = os.getenv("JIRA_EMAIL", "")
+JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN", "")
+JIRA_PROJECT_KEY = os.getenv("JIRA_PROJECT_KEY", "")
+# Correction: Utilisation d'une URL de fallback locale si la variable d'environnement n'est pas définie
+LM_STUDIO_BASE_URL = os.getenv("LM_STUDIO_API", "http://localhost:1234")
 APP_SECRET = os.getenv("APP_SECRET", "your-secret-key")
 
 # URLs pour les APIs LM Studio
@@ -76,24 +77,32 @@ def check_lm_studio_status(force=False):
         
         # Utiliser une session avec retry pour plus de fiabilité
         session = get_http_session()
-        response = session.get(LM_STUDIO_MODELS_URL, timeout=10)
+        # Augmenter le timeout et ajouter une vérification plus souple
+        response = session.get(LM_STUDIO_MODELS_URL, timeout=15)
         logger.info(f"Réponse: {response.status_code}")
         
         success = response.status_code == 200
         
-        # Vérifier que la réponse contient bien des modèles
+        # Correction: assouplir la vérification des modèles
         if success:
             try:
                 models_data = response.json()
                 if "data" in models_data and len(models_data["data"]) > 0:
                     model_ids = [model.get('id') for model in models_data["data"]]
                     logger.info(f"Modèles disponibles: {model_ids}")
-                    # Vérifier que notre modèle par défaut est disponible
-                    if DEFAULT_MODEL in model_ids:
-                        logger.info(f"Le modèle par défaut {DEFAULT_MODEL} est disponible")
+                    
+                    # Correction: Ne pas exiger que le modèle par défaut soit exactement présent
+                    # Vérifier qu'il y a au moins un modèle disponible
+                    if len(model_ids) > 0:
+                        # Si notre modèle par défaut n'est pas disponible, utiliser le premier modèle disponible
+                        if DEFAULT_MODEL not in model_ids:
+                            logger.warning(f"Le modèle par défaut {DEFAULT_MODEL} n'est pas disponible, utilisation de {model_ids[0]}")
+                            # Mettre à jour la variable globale
+                            global DEFAULT_MODEL
+                            DEFAULT_MODEL = model_ids[0]
                     else:
-                        logger.warning(f"Le modèle par défaut {DEFAULT_MODEL} n'est pas disponible")
-                        success = False  # Considérer comme non disponible si le modèle par défaut n'est pas trouvé
+                        logger.warning("Aucun modèle disponible")
+                        success = False
                 else:
                     logger.warning(f"Réponse valide mais sans modèles: {models_data}")
                     success = False
@@ -201,7 +210,8 @@ def generate_response(prompt, max_tokens=800, temperature=0.7, model=DEFAULT_MOD
         
         # Utiliser la session HTTP avec retry pour plus de fiabilité
         session = get_http_session()
-        response = session.post(LM_STUDIO_CHAT_URL, json=payload, headers=headers, timeout=120)
+        # Augmenter le timeout pour les modèles plus lents
+        response = session.post(LM_STUDIO_CHAT_URL, json=payload, headers=headers, timeout=180)
         
         if response.status_code != 200:
             logger.error(f"Erreur HTTP {response.status_code}: {response.text}")
@@ -269,6 +279,7 @@ def api_generate():
         story = data.get("story", "").strip()
         format_choice = data.get("format", "gherkin")
         language = data.get("language", "fr")
+        # Correction: utiliser le modèle par défaut même s'il a été mis à jour
         model = data.get("model", DEFAULT_MODEL)
         
         if not story:
@@ -283,12 +294,13 @@ def api_generate():
         prompt = build_prompt(story, format_choice, language)
         logger.info(f"Envoi du prompt pour générer des tests (taille: {len(prompt)})")
         generated = generate_response(prompt, model=model)
-        
+
         # Vérifier si la réponse est une erreur
         if generated.startswith("Erreur") or generated.startswith("Timeout"):
             return jsonify({"error": generated}), 500
             
         return jsonify({"result": generated})
+    
     except Exception as e:
         logger.error(f"Erreur lors du traitement de la requête: {e}")
         return jsonify({"error": f"Erreur serveur: {str(e)}"}), 500
@@ -425,6 +437,35 @@ def healthcheck():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+# Nouveau endpoint pour tester manuellement la connexion à une URL spécifique
+@app.route("/api/test_connection", methods=["POST"])
+def test_connection():
+    """Endpoint pour tester la connexion à une URL LM Studio spécifique"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Données JSON manquantes"}), 400
+            
+        test_url = data.get("url", "").strip()
+        
+        if not test_url:
+            return jsonify({"error": "Aucune URL fournie"}), 400
+
+        logger.info(f"Test de connexion à {test_url}")
+        
+        # Utiliser la session HTTP avec retry
+        session = get_http_session()
+        response = session.get(f"{test_url}/v1/models", timeout=10)
+        
+        return jsonify({
+            "status_code": response.status_code,
+            "success": response.status_code == 200,
+            "content": response.text if len(response.text) < 500 else response.text[:500] + "..."
+        }), 200
+    except Exception as e:
+        logger.error(f"Erreur lors du test de connexion: {e}")
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == "__main__":
     # Vérifier la configuration au démarrage
     logger.info(f"LM Studio URL: {LM_STUDIO_BASE_URL}")
@@ -438,4 +479,6 @@ if __name__ == "__main__":
     else:
         logger.warning("LM Studio n'est pas disponible au démarrage. Vérifiez la connexion.")
     
-    app.run(debug=True, port=5000)
+    # Utiliser environment variable PORT si disponible, sinon 5000
+    port = int(os.environ.get("PORT", 5000))
+    app.run(debug=True, host="0.0.0.0", port=port)
