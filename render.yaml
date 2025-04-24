@@ -4,6 +4,7 @@ services:
     env: python
     buildCommand: ""
     startCommand: gunicorn app:app --timeout 180 --bind 0.0.0.0:$PORT
+   
 
     envVars:
       - key: PORT
@@ -14,7 +15,7 @@ services:
         value: hermann.glan@amani.consulting
       - key: JIRA_PROJECT_KEY
         value: ACD
-      - key: API_URL
-        value:  https://destruction-annie-bed-diamond.trycloudflare.com/v1/models  
+      - key: LM_STUDIO_BASE_URL
+        value: https://concentrations-strange-achieve-w.trycloudflare.com/v1/models
       - key: JIRA_API_TOKEN
         sync: false  # Vous devrez ajouter cette variable manuellement dans l'interface Render

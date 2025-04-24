@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Générateur de Cas de Test avec LM Studio</title>
+    <title>Générateur de Cas de Test avec LM Studio Premium</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -188,13 +188,89 @@
         .reset-button {
             margin-top: 10px;
         }
+
+        /* Nouveaux styles */
+        .nav-tabs .nav-link {
+            color: #172b4d;
+            border: none;
+            border-bottom: 2px solid transparent;
+            padding: 10px 15px;
+        }
+
+        .nav-tabs .nav-link.active {
+            border-color: #0052cc;
+            color: #0052cc;
+            background-color: transparent;
+            font-weight: 600;
+        }
+
+        .tab-content {
+            padding: 20px 0;
+        }
+
+        .history-item {
+            padding: 10px;
+            border-bottom: 1px solid #dfe1e6;
+            cursor: pointer;
+        }
+
+        .history-item:hover {
+            background-color: #f4f5f7;
+        }
+
+        .history-title {
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        .history-date {
+            font-size: 12px;
+            color: #6B778C;
+        }
+
+        .jira-badge {
+            font-size: 12px;
+            background-color: #0052cc;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-left: 5px;
+        }
+
+        .template-item {
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #dfe1e6;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .template-item:hover {
+            background-color: #f4f5f7;
+        }
+
+        .advanced-settings {
+            display: none;
+            padding: 15px;
+            background-color: #f4f5f7;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+
+        .toggle-advanced {
+            cursor: pointer;
+            color: #0052cc;
+            text-decoration: underline;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>
             <i class="fas fa-vial me-2"></i>
-            Générateur de Cas de Test avec LM Studio
+            Générateur de Cas de Test avec LM Studio Premium
         </h1>
         
         <div id="statusIndicator" class="status-indicator" style="display: none;">
@@ -202,109 +278,298 @@
             <span id="statusText">Vérification de la connexion...</span>
         </div>
         
-        <div class="row">
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <i class="fas fa-pen me-2"></i>
-                        User Story
+        <ul class="nav nav-tabs" id="mainTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="generator-tab" data-bs-toggle="tab" data-bs-target="#generator" type="button" role="tab" aria-controls="generator" aria-selected="true">
+                    <i class="fas fa-magic me-2"></i>Générateur
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button" role="tab" aria-controls="history" aria-selected="false">
+                    <i class="fas fa-history me-2"></i>Historique
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="templates-tab" data-bs-toggle="tab" data-bs-target="#templates" type="button" role="tab" aria-controls="templates" aria-selected="false">
+                    <i class="fas fa-folder-open me-2"></i>Templates
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings" type="button" role="tab" aria-controls="settings" aria-selected="false">
+                    <i class="fas fa-cog me-2"></i>Paramètres
+                </button>
+            </li>
+        </ul>
+        
+        <div class="tab-content" id="mainTabsContent">
+            <!-- Tab 1: Générateur -->
+            <div class="tab-pane fade show active" id="generator" role="tabpanel" aria-labelledby="generator-tab">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="fas fa-pen me-2"></i>
+                                User Story
+                            </div>
+                            <div class="card-body">
+                                <form id="testGenForm">
+                                    <div class="mb-3">
+                                        <label for="user_story" class="form-label">Saisissez votre user story</label>
+                                        <textarea class="form-control" id="user_story" name="user_story" rows="5" placeholder="En tant qu'utilisateur, je souhaite..." required></textarea>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="format-selection" class="form-label">Format des cas de test</label>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="format" id="gherkin" value="gherkin" checked>
+                                            <label class="form-check-label" for="gherkin">
+                                                Gherkin (Given/When/Then)
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="format" id="action" value="action">
+                                            <label class="form-check-label" for="action">
+                                                Action / Résultat attendu
+                                            </label>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="language-selection" class="form-label">Langue</label>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="language" id="fr" value="fr" checked>
+                                            <label class="form-check-label" for="fr">
+                                                Français
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="language" id="en" value="en">
+                                            <label class="form-check-label" for="en">
+                                                Anglais
+                                            </label>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3 model-selector">
+                                        <label for="modelSelect" class="form-label">Modèle LM Studio</label>
+                                        <select class="form-select" id="modelSelect" name="model">
+                                            <option value="" selected>Chargement des modèles...</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <a class="toggle-advanced" id="toggleAdvanced">
+                                            <i class="fas fa-sliders-h me-1"></i>
+                                            Paramètres avancés
+                                        </a>
+                                        <div class="advanced-settings" id="advancedSettings">
+                                            <div class="mb-3">
+                                                <label for="maxTokens" class="form-label">Nombre max de tokens</label>
+                                                <input type="range" class="form-range" id="maxTokens" min="100" max="2000" step="100" value="800">
+                                                <div class="d-flex justify-content-between">
+                                                    <span>100</span>
+                                                    <span id="maxTokensValue">800</span>
+                                                    <span>2000</span>
+                                                </div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="temperature" class="form-label">Température (créativité)</label>
+                                                <input type="range" class="form-range" id="temperature" min="0" max="1" step="0.1" value="0.7">
+                                                <div class="d-flex justify-content-between">
+                                                    <span>0 (précis)</span>
+                                                    <span id="temperatureValue">0.7</span>
+                                                    <span>1 (créatif)</span>
+                                                </div>
+                                            </div>
+                                            <div class="form-check mb-3">
+                                                <input class="form-check-input" type="checkbox" id="createJiraTasks">
+                                                <label class="form-check-label" for="createJiraTasks">
+                                                    Créer automatiquement des tâches Jira
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <button type="submit" class="btn btn-primary w-100" id="generateBtn">
+                                        <i class="fas fa-magic me-2"></i>
+                                        Générer les cas de test
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <form id="testGenForm">
-                            <div class="mb-3">
-                                <label for="user_story" class="form-label">Saisissez votre user story</label>
-                                <textarea class="form-control" id="user_story" name="user_story" rows="5" placeholder="En tant qu'utilisateur, je souhaite..." required></textarea>
+                    
+                    <div class="col-md-6">
+                        <div class="card" id="resultCard" style="display: none;">
+                            <div class="card-header">
+                                <i class="fas fa-check-circle me-2"></i>
+                                Cas de test générés
                             </div>
-                            
-                            <div class="mb-3">
-                                <label for="format-selection" class="form-label">Format des cas de test</label>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="format" id="gherkin" value="gherkin" checked>
-                                    <label class="form-check-label" for="gherkin">
-                                        Gherkin (Given/When/Then)
-                                    </label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="format" id="action" value="action">
-                                    <label class="form-check-label" for="action">
-                                        Action / Résultat attendu
-                                    </label>
-                                </div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="language-selection" class="form-label">Langue</label>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="language" id="fr" value="fr" checked>
-                                    <label class="form-check-label" for="fr">
-                                        Français
-                                    </label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="language" id="en" value="en">
-                                    <label class="form-check-label" for="en">
-                                        Anglais
-                                    </label>
+                            <div class="card-body">
+                                <div class="code-area" id="testCasesOutput"></div>
+                                
+                                <div class="action-buttons">
+                                    <button class="btn btn-secondary" id="copyBtn">
+                                        <i class="fas fa-copy me-2"></i>
+                                        Copier
+                                    </button>
+                                    <button class="btn btn-success" id="saveBtn">
+                                        <i class="fas fa-save me-2"></i>
+                                        Sauvegarder
+                                    </button>
+                                    <button class="btn btn-primary" id="jiraBtn">
+                                        <i class="fas fa-tasks me-2"></i>
+                                        Créer tâches Jira
+                                    </button>
                                 </div>
                             </div>
-                            
-                            <div class="mb-3 model-selector">
-                                <label for="model-selection" class="form-label">Modèle LM Studio</label>
-                                <select class="form-select" id="modelSelect" name="model">
-                                    <option value="" selected>Chargement des modèles...</option>
-                                </select>
-                            </div>
-                            
-                            <button type="submit" class="btn btn-primary w-100" id="generateBtn">
-                                <i class="fas fa-magic me-2"></i>
-                                Générer les cas de test
-                            </button>
-                        </form>
-                    </div>
-                </div>
-                
-                <div class="card mt-3">
-                    <div class="card-header">
-                        <i class="fas fa-cog me-2"></i>
-                        Paramètres
-                    </div>
-                    <div class="card-body">
-                        <button class="btn btn-secondary w-100 mb-2" id="checkStatusBtn">
-                            <i class="fas fa-sync-alt me-2"></i>
-                            Vérifier la connexion
-                        </button>
-                        <button class="btn btn-danger w-100 reset-button" id="resetConnectionBtn">
-                            <i class="fas fa-power-off me-2"></i>
-                            Réinitialiser la connexion
-                        </button>
+                        </div>
+                        
+                        <div class="loading" id="loadingIndicator">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Génération des cas de test en cours...</p>
+                        </div>
+                        
+                        <div id="messageContainer"></div>
                     </div>
                 </div>
             </div>
             
-            <div class="col-md-6">
-                <div class="card" id="resultCard" style="display: none;">
+            <!-- Tab 2: Historique -->
+            <div class="tab-pane fade" id="history" role="tabpanel" aria-labelledby="history-tab">
+                <div class="card">
                     <div class="card-header">
-                        <i class="fas fa-check-circle me-2"></i>
-                        Cas de test générés
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="fas fa-history me-2"></i>
+                                Historique des générations
+                            </div>
+                            <div>
+                                <input type="text" class="form-control form-control-sm" id="historySearch" placeholder="Rechercher...">
+                            </div>
+                        </div>
                     </div>
                     <div class="card-body">
-                        <div class="code-area" id="testCasesOutput"></div>
-                        
-                        <div class="action-buttons">
-                            <button class="btn btn-secondary" id="copyBtn">
-                                <i class="fas fa-copy me-2"></i>
-                                Copier
-                            </button>
+                        <div class="history-list">
+                            <div class="history-item" data-id="1">
+                                <div class="d-flex justify-content-between">
+                                    <div class="history-title">Authentification utilisateur <span class="jira-badge">JIRA</span></div>
+                                    <div class="history-date">23/04/2025 - 14:30</div>
+                                </div>
+                                <div class="history-preview">En tant qu'utilisateur, je souhaite pouvoir me connecter...</div>
+                            </div>
+                            <div class="history-item" data-id="2">
+                                <div class="d-flex justify-content-between">
+                                    <div class="history-title">Gestion des profils</div>
+                                    <div class="history-date">22/04/2025 - 10:15</div>
+                                </div>
+                                <div class="history-preview">En tant qu'administrateur, je souhaite modifier les profils...</div>
+                            </div>
+                            <div class="history-item" data-id="3">
+                                <div class="d-flex justify-content-between">
+                                    <div class="history-title">Panier d'achat <span class="jira-badge">JIRA</span></div>
+                                    <div class="history-date">21/04/2025 - 16:45</div>
+                                </div>
+                                <div class="history-preview">En tant qu'utilisateur, je souhaite ajouter des produits au panier...</div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                
-                <div class="loading" id="loadingIndicator">
-                    <i class="fas fa-spinner fa-spin"></i>
-                    <p>Génération des cas de test en cours...</p>
+            </div>
+            
+            <!-- Tab 3: Templates -->
+            <div class="tab-pane fade" id="templates" role="tabpanel" aria-labelledby="templates-tab">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-folder-open me-2"></i>
+                        Templates prédéfinis
+                    </div>
+                    <div class="card-body">
+                        <div class="template-list">
+                            <div class="template-item" data-template="auth">
+                                <h5><i class="fas fa-lock me-2"></i>Authentification</h5>
+                                <p>En tant qu'utilisateur, je souhaite pouvoir me connecter à l'application avec mon email et mot de passe.</p>
+                            </div>
+                            <div class="template-item" data-template="register">
+                                <h5><i class="fas fa-user-plus me-2"></i>Inscription</h5>
+                                <p>En tant que nouvel utilisateur, je souhaite pouvoir créer un compte en fournissant mes informations personnelles.</p>
+                            </div>
+                            <div class="template-item" data-template="password">
+                                <h5><i class="fas fa-key me-2"></i>Récupération de mot de passe</h5>
+                                <p>En tant qu'utilisateur, je souhaite pouvoir réinitialiser mon mot de passe en cas d'oubli.</p>
+                            </div>
+                            <div class="template-item" data-template="profile">
+                                <h5><i class="fas fa-id-card me-2"></i>Mise à jour de profil</h5>
+                                <p>En tant qu'utilisateur connecté, je souhaite pouvoir modifier mes informations personnelles.</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                
-                <div id="messageContainer"></div>
+            </div>
+            
+            <!-- Tab 4: Paramètres -->
+            <div class="tab-pane fade" id="settings" role="tabpanel" aria-labelledby="settings-tab">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="fas fa-cog me-2"></i>
+                                Paramètres de connexion
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="lmStudioUrl" class="form-label">URL de l'API LM Studio</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="lmStudioUrl" placeholder="http://localhost:1234/v1/models">
+                                        <button class="btn btn-secondary" id="testConnectionBtn">
+                                            <i class="fas fa-plug me-1"></i>
+                                            Tester
+                                        </button>
+                                    </div>
+                                </div>
+                                <button class="btn btn-secondary w-100 mb-2" id="checkStatusBtn">
+                                    <i class="fas fa-sync-alt me-2"></i>
+                                    Vérifier la connexion
+                                </button>
+                                <button class="btn btn-danger w-100 reset-button" id="resetConnectionBtn">
+                                    <i class="fas fa-power-off me-2"></i>
+                                    Réinitialiser la connexion
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="fab fa-jira me-2"></i>
+                                Configuration Jira
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="jiraUrl" class="form-label">URL Jira</label>
+                                    <input type="text" class="form-control" id="jiraUrl" placeholder="https://votre-instance.atlassian.net">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="jiraEmail" class="form-label">Email</label>
+                                    <input type="email" class="form-control" id="jiraEmail" placeholder="votre.email@exemple.com">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="jiraToken" class="form-label">Token API</label>
+                                    <input type="password" class="form-control" id="jiraToken" placeholder="Token API">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="jiraProject" class="form-label">Clé du projet</label>
+                                    <input type="text" class="form-control" id="jiraProject" placeholder="PROJ">
+                                </div>
+                                <button class="btn btn-primary w-100" id="saveJiraBtn">
+                                    <i class="fas fa-save me-2"></i>
+                                    Sauvegarder la configuration
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         
@@ -314,6 +579,7 @@
         </div>
     </div>
     
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const testGenForm = document.getElementById('testGenForm');
@@ -321,6 +587,8 @@
             const resultCard = document.getElementById('resultCard');
             const testCasesOutput = document.getElementById('testCasesOutput');
             const copyBtn = document.getElementById('copyBtn');
+            const saveBtn = document.getElementById('saveBtn');
+            const jiraBtn = document.getElementById('jiraBtn');
             const messageContainer = document.getElementById('messageContainer');
             const statusIndicator = document.getElementById('statusIndicator');
             const statusText = document.getElementById('statusText');
@@ -330,12 +598,46 @@
             const resetConnectionBtn = document.getElementById('resetConnectionBtn');
             const debugInfo = document.getElementById('debugInfo');
             const debugContent = document.getElementById('debugContent');
+            const toggleAdvanced = document.getElementById('toggleAdvanced');
+            const advancedSettings = document.getElementById('advancedSettings');
+            const maxTokensRange = document.getElementById('maxTokens');
+            const maxTokensValue = document.getElementById('maxTokensValue');
+            const temperatureRange = document.getElementById('temperature');
+            const temperatureValue = document.getElementById('temperatureValue');
+            const createJiraTasks = document.getElementById('createJiraTasks');
+            const testConnectionBtn = document.getElementById('testConnectionBtn');
+
+            // Initialize tooltips
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
             
             // Vérifier l'état de la connexion au démarrage
             checkApiStatus();
             
             // Charger les modèles disponibles
             loadModels();
+            
+            // Toggle advanced settings
+            toggleAdvanced.addEventListener('click', function() {
+                if (advancedSettings.style.display === 'block') {
+                    advancedSettings.style.display = 'none';
+                    toggleAdvanced.innerHTML = '<i class="fas fa-sliders-h me-1"></i> Paramètres avancés';
+                } else {
+                    advancedSettings.style.display = 'block';
+                    toggleAdvanced.innerHTML = '<i class="fas fa-times me-1"></i> Masquer les paramètres avancés';
+                }
+            });
+            
+            // Update range values
+            maxTokensRange.addEventListener('input', function() {
+                maxTokensValue.textContent = this.value;
+            });
+            
+            temperatureRange.addEventListener('input', function() {
+                temperatureValue.textContent = this.value;
+            });
             
             // Gérer le bouton de vérification de status
             checkStatusBtn.addEventListener('click', function() {
@@ -347,6 +649,58 @@
             resetConnectionBtn.addEventListener('click', function() {
                 resetConnection();
             });
+            
+            // Template click handler
+            document.querySelectorAll('.template-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const templateId = this.getAttribute('data-template');
+                    loadTemplate(templateId);
+                });
+            });
+            
+            // Test connection button
+            testConnectionBtn.addEventListener('click', function() {
+                const url = document.getElementById('lmStudioUrl').value.trim();
+                if (!url) {
+                    showMessage('Veuillez saisir une URL valide', 'error');
+                    return;
+                }
+                
+                testConnection(url);
+            });
+
+            function loadTemplate(templateId) {
+                const templateText = document.querySelector(`.template-item[data-template="${templateId}"] p`).textContent;
+                document.getElementById('user_story').value = templateText;
+                
+                // Switch to generator tab
+                document.getElementById('generator-tab').click();
+                
+                showMessage(`Template "${templateId}" chargé avec succès`, 'success');
+            }
+            
+            function testConnection(url) {
+                showMessage('Test de connexion en cours...', 'info');
+                
+                fetch('/api/test_connection', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ url: url })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showMessage('Connexion réussie à l\'URL spécifiée', 'success');
+                    } else {
+                        showMessage(`Échec de la connexion: ${data.status_code}`, 'error');
+                    }
+                })
+                .catch(error => {
+                    showMessage(`Erreur de connexion: ${error.message}`, 'error');
+                });
+            }
             
             function checkApiStatus() {
                 statusIndicator.style.display = 'flex';
@@ -368,212 +722,256 @@
                     })
                     .catch(error => {
                         statusIndicator.className = 'status-indicator status-offline';
-                        statusText.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Erreur de connexion à l'API`;
-                        generateBtn.disabled = true;
-                        showMessage('Impossible de vérifier l\'état de l\'API', 'error');
+                        statusText.innerHTML = `<i class="fas fa-exclamation-triangle"></i> LM Studio non disponible`;
+                        showMessage(`Erreur lors de la vérification du statut: ${error.message}`, 'error');
                     });
             }
             
+           
+
             function loadModels() {
-                fetch('/api/models')
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error(`Erreur HTTP: ${response.status}`);
-                        }
-                        return response.json();
-                    })
+    fetch('/api/models')
+        .then(response => response.json())
+        .then(data => {
+            const models = data.data;
+            const defaultModel = data.default_model;
+
+            if (models && models.length > 0) {
+                modelSelect.innerHTML = ''; // Vide le select
+                models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.id;
+                    option.textContent = model.name; // Maintenant sûr que model.name est une string propre
+                    if (model.id === defaultModel) {
+                        option.selected = true;
+                    }
+                    modelSelect.appendChild(option);
+                });
+            } else {
+                modelSelect.innerHTML = '<option>Aucun modèle disponible</option>';
+            }
+        })
+        .catch(error => {
+            modelSelect.innerHTML = '<option>Erreur de chargement des modèles</option>';
+            console.error('Erreur lors du chargement des modèles:', error);
+        });
+}
+
+
+            
+            function resetConnection() {
+                fetch('/api/reset_connection', { method: 'POST' })
+                    .then(response => response.json())
                     .then(data => {
-                        // Vider le sélecteur de modèles
-                        modelSelect.innerHTML = '';
-                        
-                        if (data.data && data.data.length > 0) {
-                            // Parcourir les modèles disponibles
-                            data.data.forEach(model => {
-                                const option = document.createElement('option');
-                                option.value = model.id;
-                                option.textContent = model.id;
-                                
-                                // Sélectionner par défaut le modèle par défaut
-                                if (model.id === data.default_model) {
-                                    option.selected = true;
-                                }
-                                
-                                modelSelect.appendChild(option);
-                            });
-                            
-                            showMessage(`${data.data.length} modèles disponibles`, 'info');
+                        if (data.success) {
+                            showMessage('Connexion réinitialisée avec succès', 'success');
+                            checkApiStatus();
+                            loadModels();
                         } else {
-                            const option = document.createElement('option');
-                            option.value = "";
-                            option.textContent = "Aucun modèle disponible";
-                            modelSelect.appendChild(option);
-                            
-                            showMessage('Aucun modèle disponible dans LM Studio', 'warning');
+                            showMessage('Échec de la réinitialisation de la connexion', 'error');
                         }
                     })
                     .catch(error => {
-                        const option = document.createElement('option');
-                        option.value = "";
-                        option.textContent = "Erreur de chargement";
-                        modelSelect.innerHTML = '';
-                        modelSelect.appendChild(option);
-                        
-                        console.error('Erreur lors du chargement des modèles:', error);
-                        showMessage('Erreur lors du chargement des modèles', 'error');
+                        showMessage(`Erreur lors de la réinitialisation: ${error.message}`, 'error');
                     });
             }
             
-            function resetConnection() {
-                showMessage('Réinitialisation de la connexion à LM Studio...', 'info');
+            function showMessage(message, type) {
+                const messageDiv = document.createElement('div');
+                let className = '';
                 
-                fetch('/api/reset_connection', {
-                    method: 'POST'
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status) {
-                        showMessage('Connexion réinitialisée avec succès', 'success');
-                    } else {
-                        showMessage('Échec de la réinitialisation', 'error');
-                    }
-                    
-                    // Actualiser l'état et les modèles
-                    checkApiStatus();
-                    loadModels();
-                })
-                .catch(error => {
-                    showMessage('Erreur lors de la réinitialisation', 'error');
-                    console.error('Erreur:', error);
-                });
+                switch(type) {
+                    case 'error':
+                        className = 'error-message';
+                        message = `<i class="fas fa-exclamation-circle me-2"></i>${message}`;
+                        break;
+                    case 'success':
+                        className = 'success-message';
+                        message = `<i class="fas fa-check-circle me-2"></i>${message}`;
+                        break;
+                    case 'warning':
+                        className = 'warning-message';
+                        message = `<i class="fas fa-exclamation-triangle me-2"></i>${message}`;
+                        break;
+                    case 'info':
+                        className = 'info-message';
+                        message = `<i class="fas fa-info-circle me-2"></i>${message}`;
+                        break;
+                }
+                
+                messageDiv.className = className;
+                messageDiv.innerHTML = message;
+                
+                messageContainer.appendChild(messageDiv);
+                
+                setTimeout(() => {
+                    messageDiv.style.opacity = '0';
+                    setTimeout(() => {
+                        messageContainer.removeChild(messageDiv);
+                    }, 500);
+                }, 5000);
             }
             
-            // Gérer la soumission du formulaire
-            testGenForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                const userStory = document.getElementById('user_story').value.trim();
-                if (!userStory) {
-                    showMessage('Veuillez saisir une user story.', 'error');
-                    return;
-                }
-                
-                const formatChoice = document.querySelector('input[name="format"]:checked').value;
-                const languageChoice = document.querySelector('input[name="language"]:checked').value;
-                const modelChoice = modelSelect.value;
-                
-                if (!modelChoice) {
-                    showMessage('Veuillez sélectionner un modèle.', 'error');
-                    return;
-                }
-                
-                // Afficher l'indicateur de chargement
-                loadingIndicator.style.display = 'block';
-                resultCard.style.display = 'none';
-                messageContainer.innerHTML = '';
-                
-                // Créer un contrôleur d'abandon pour le timeout
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minutes de timeout
-                
-                // Envoyer la requête à l'API
-                fetch('/api/generate', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        story: userStory,
-                        format: formatChoice,
-                        language: languageChoice,
-                        model: modelChoice
-                    }),
-                    signal: controller.signal
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`Erreur HTTP: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    // Masquer l'indicateur de chargement
-                    loadingIndicator.style.display = 'none';
-                    
-                    if (data.error) {
-                        showMessage(data.error, 'error');
-                        return;
-                    }
-                    
-                    // Afficher les résultats
-                    testCasesOutput.textContent = data.result;
-                    resultCard.style.display = 'block';
-                    showMessage('Cas de test générés avec succès!', 'success');
-                })
-                .catch(error => {
-                    loadingIndicator.style.display = 'none';
-                    
-                    if (error.name === 'AbortError') {
-                        showMessage('La génération a pris trop de temps. Le serveur est peut-être surchargé, veuillez réessayer.', 'error');
-                    } else if (error.message.includes('Failed to fetch')) {
-                        showMessage('Impossible de se connecter au serveur. Vérifiez votre connexion internet ou réessayez plus tard.', 'error');
-                    } else {
-                        showMessage(`Erreur: ${error.message}`, 'error');
-                    }
-                    
-                    console.error('Erreur:', error);
-                    
-                    // Vérifier l'état de l'API après une erreur
-                    checkApiStatus();
-                })
-                .finally(() => {
-                    clearTimeout(timeoutId);
-                });
-            });
-            
-            // Copier le contenu dans le presse-papier
             copyBtn.addEventListener('click', function() {
-                const textToCopy = testCasesOutput.textContent;
-                navigator.clipboard.writeText(textToCopy)
+                navigator.clipboard.writeText(testCasesOutput.textContent)
                     .then(() => {
-                        showMessage('Cas de test copiés!', 'success');
+                        showMessage('Cas de test copiés dans le presse-papier', 'success');
                     })
                     .catch(err => {
                         showMessage('Erreur lors de la copie: ' + err, 'error');
                     });
             });
             
-            // Afficher les informations de débogage
-            document.addEventListener('keydown', function(e) {
-                // Activer le mode debug avec Ctrl+Alt+D
-                if (e.ctrlKey && e.altKey && e.key === 'd') {
-                    fetch('/api/debug')
-                        .then(response => response.json())
-                        .then(data => {
-                            debugContent.textContent = JSON.stringify(data, null, 2);
-                            debugInfo.style.display = 'block';
-                        })
-                        .catch(error => {
-                            console.error('Erreur debug:', error);
-                        });
-                }
+            saveBtn.addEventListener('click', function() {
+                const userStory = document.getElementById('user_story').value;
+                const testCases = testCasesOutput.textContent;
+                
+                fetch('/api/save_history', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        userStory: userStory,
+                        testCases: testCases,
+                        format: document.querySelector('input[name="format"]:checked').value,
+                        language: document.querySelector('input[name="language"]:checked').value
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showMessage('Cas de test sauvegardés avec succès', 'success');
+                    } else {
+                        showMessage('Erreur lors de la sauvegarde', 'error');
+                    }
+                })
+                .catch(error => {
+                    showMessage(`Erreur lors de la sauvegarde: ${error.message}`, 'error');
+                });
             });
             
-            // Fonction pour afficher des messages
-            function showMessage(message, type) {
-                const messageClass = type === 'error' ? 'error-message' : 
-                                    type === 'success' ? 'success-message' :
-                                    type === 'warning' ? 'warning-message' : 'info-message';
-                                    
-                messageContainer.innerHTML = `<div class="${messageClass}">
-                    <i class="fas ${type === 'error' ? 'fa-exclamation-circle' : 
-                                    type === 'success' ? 'fa-check-circle' :
-                                    type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'}"></i>
-                    ${message}
-                </div>`;
+            jiraBtn.addEventListener('click', function() {
+                const userStory = document.getElementById('user_story').value;
+                const testCases = testCasesOutput.textContent;
                 
-                // Scroll jusqu'au message
-                messageContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }
+                showMessage('Création des tâches Jira en cours...', 'info');
+                
+                fetch('/api/create_jira_tasks', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        userStory: userStory,
+                        testCases: testCases,
+                        jiraProject: document.getElementById('jiraProject').value
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showMessage(`${data.tasksCreated} tâches Jira créées avec succès`, 'success');
+                    } else {
+                        showMessage(`Erreur lors de la création des tâches Jira: ${data.error}`, 'error');
+                    }
+                })
+                .catch(error => {
+                    showMessage(`Erreur lors de la création des tâches Jira: ${error.message}`, 'error');
+                });
+            });
+            
+            testGenForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const userStory = document.getElementById('user_story').value;
+                if (!userStory.trim()) {
+                    showMessage('Veuillez saisir une user story', 'error');
+                    return;
+                }
+                
+                const selectedModel = modelSelect.value;
+                if (!selectedModel) {
+                    showMessage('Veuillez sélectionner un modèle', 'error');
+                    return;
+                }
+                
+                const format = document.querySelector('input[name="format"]:checked').value;
+                const language = document.querySelector('input[name="language"]:checked').value;
+                const maxTokens = maxTokensRange.value;
+                const temperature = temperatureRange.value;
+                const autoCreateJira = createJiraTasks.checked;
+                
+                loadingIndicator.style.display = 'block';
+                resultCard.style.display = 'none';
+
+
+                // Exemple d'appel API avec gestion des erreurs
+function makeApiCall(url, data) {
+  return fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+    // Ajouter un timeout plus long
+    signal: AbortSignal.timeout(30000) // 30 secondes
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`Erreur HTTP: ${response.status}`);
+    }
+    return response.json();
+  })
+  .catch(error => {
+    console.error('Erreur lors de la requête API:', error);
+    // Gérer l'erreur de manière appropriée
+    // Par exemple, afficher un message d'erreur
+  });
+}
+                
+                fetch('/api/test_generation', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        userStory: userStory,
+                        format: format,
+                        language: language,
+                        model: selectedModel,
+                        maxTokens: maxTokens,
+                        temperature: temperature
+                    })
+                }
+              )
+                .then(response => response.json())
+                .then(data => {
+                    loadingIndicator.style.display = 'none';
+                    
+                    if (data.success) {
+                        testCasesOutput.textContent = data.testCases;
+                        resultCard.style.display = 'block';
+                        
+                        // Log debug info
+                        if (data.debug) {
+                            debugInfo.style.display = 'block';
+                            debugContent.textContent = JSON.stringify(data.debug, null, 2);
+                        }
+                        
+                        // Auto-create Jira tasks if enabled
+                        if (autoCreateJira) {
+                            jiraBtn.click();
+                        }
+                    } else {
+                        showMessage(`Erreur lors de la génération: ${data.error}`, 'error');
+                    }
+                })
+                .catch(error => {
+                    loadingIndicator.style.display = 'none';
+                    showMessage(`Erreur lors de la génération: ${error.message}`, 'error');
+                });
+            });
         });
     </script>
 </body>

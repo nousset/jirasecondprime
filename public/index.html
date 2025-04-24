@@ -1,580 +1,190 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Générateur de Cas de Test avec LM Studio</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f5f7fa;
-            padding: 20px;
-        }
-        
-        .container {
-            max-width: 1200px;
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            padding: 25px;
-            margin-top: 20px;
-        }
-        
-        h1 {
-            color: #172b4d;
-            font-weight: 600;
-            border-bottom: 2px solid #dfe1e6;
-            padding-bottom: 15px;
-            margin-bottom: 25px;
-        }
-        
-        .card {
-            border: none;
-            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
-        }
-        
-        .card-header {
-            background-color: #f4f5f7;
-            border-bottom: 1px solid #dfe1e6;
-            font-weight: 600;
-        }
-        
-        .btn-primary {
-            background-color: #0052cc;
-            border-color: #0052cc;
-        }
-        
-        .btn-primary:hover {
-            background-color: #0047b3;
-            border-color: #0047b3;
-        }
-        
-        .btn-secondary {
-            background-color: #6c757d;
-            border-color: #6c757d;
-        }
-        
-        .btn-success {
-            background-color: #36b37e;
-            border-color: #36b37e;
-        }
-        
-        .btn-success:hover {
-            background-color: #2ea06e;
-            border-color: #2ea06e;
-        }
-        
-        .btn-danger {
-            background-color: #de350b;
-            border-color: #de350b;
-        }
-        
-        .btn-danger:hover {
-            background-color: #bf2e0a;
-            border-color: #bf2e0a;
-        }
-        
-        .result-container {
-            margin-top: 20px;
-            padding: 15px;
-            border: 1px solid #dfe1e6;
-            border-radius: 5px;
-            background-color: #fff;
-            white-space: pre-line;
-        }
-        
-        .code-area {
-            font-family: 'Courier New', Courier, monospace;
-            background-color: #f8f9fa;
-            padding: 15px;
-            border-radius: 5px;
-            border: 1px solid #dfe1e6;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 20px;
-        }
-        
-        .loading i {
-            font-size: 30px;
-            color: #0052cc;
-        }
-        
-        .error-message {
-            color: #de350b;
-            background-color: #ffebe6;
-            padding: 10px;
-            border-radius: 5px;
-            margin-top: 10px;
-        }
-        
-        .success-message {
-            color: #006644;
-            background-color: #e3fcef;
-            padding: 10px;
-            border-radius: 5px;
-            margin-top: 10px;
-        }
-        
-        .warning-message {
-            color: #974F0C;
-            background-color: #FFF7D6;
-            padding: 10px;
-            border-radius: 5px;
-            margin-top: 10px;
-        }
-        
-        .info-message {
-            color: #0747A6;
-            background-color: #DEEBFF;
-            padding: 10px;
-            border-radius: 5px;
-            margin-top: 10px;
-        }
-        
-        .action-buttons {
-            margin-top: 15px;
-            display: flex;
-            gap: 10px;
-        }
-        
-        .form-label {
-            font-weight: 500;
-            color: #172b4d;
-        }
-
-        .status-indicator {
-            display: flex;
-            align-items: center;
-            margin-bottom: 15px;
-            padding: 8px;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-
-        .status-indicator i {
-            margin-right: 8px;
-        }
-
-        .status-online {
-            background-color: #E3FCEF;
-            color: #006644;
-        }
-
-        .status-offline {
-            background-color: #FFEBE6;
-            color: #DE350B;
-        }
-        
-        .model-selector {
-            margin-bottom: 15px;
-        }
-        
-        .debug-info {
-            font-size: 12px;
-            color: #6B778C;
-            margin-top: 30px;
-            padding-top: 15px;
-            border-top: 1px solid #dfe1e6;
-        }
-        
-        .reset-button {
-            margin-top: 10px;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <base href="/" />
+  <title>Générateur de Tests</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aui/9.4.0/aui/aui-prototyping.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/aui/9.4.0/aui/aui-prototyping.min.js"></script>
+  <script src="https://connect-cdn.atl-paas.net/all.js" onerror="handleAtlassianSDKError()"></script>
+  <style>
+    body { padding: 20px; font-family: Arial, sans-serif; }
+    .hidden { display: none; }
+    .loading { text-align: center; padding: 20px; }
+    .format-selector { margin-bottom: 20px; }
+    .test-results { background-color: #f4f5f7; border-radius: 3px; padding: 16px; white-space: pre-wrap; margin-top: 20px; }
+    .spinner { border: 4px solid rgba(0, 0, 0, 0.1); width: 36px; height: 36px; border-radius: 50%; border-left-color: #0052CC; animation: spin 1s linear infinite; margin: 20px auto; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    #standalone-mode { margin-bottom: 20px; padding: 15px; background-color: #FFFAE6; border-radius: 3px; border-left: 4px solid #FFAB00; }
+    textarea { width: 100%; min-height: 150px; margin-bottom: 15px; font-family: monospace; }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>
-            <i class="fas fa-vial me-2"></i>
-            Générateur de Cas de Test avec LM Studio
-        </h1>
-        
-        <div id="statusIndicator" class="status-indicator" style="display: none;">
-            <i class="fas fa-circle"></i>
-            <span id="statusText">Vérification de la connexion...</span>
-        </div>
-        
-        <div class="row">
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <i class="fas fa-pen me-2"></i>
-                        User Story
-                    </div>
-                    <div class="card-body">
-                        <form id="testGenForm">
-                            <div class="mb-3">
-                                <label for="user_story" class="form-label">Saisissez votre user story</label>
-                                <textarea class="form-control" id="user_story" name="user_story" rows="5" placeholder="En tant qu'utilisateur, je souhaite..." required></textarea>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="format-selection" class="form-label">Format des cas de test</label>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="format" id="gherkin" value="gherkin" checked>
-                                    <label class="form-check-label" for="gherkin">
-                                        Gherkin (Given/When/Then)
-                                    </label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="format" id="action" value="action">
-                                    <label class="form-check-label" for="action">
-                                        Action / Résultat attendu
-                                    </label>
-                                </div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="language-selection" class="form-label">Langue</label>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="language" id="fr" value="fr" checked>
-                                    <label class="form-check-label" for="fr">
-                                        Français
-                                    </label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="language" id="en" value="en">
-                                    <label class="form-check-label" for="en">
-                                        Anglais
-                                    </label>
-                                </div>
-                            </div>
-                            
-                            <div class="mb-3 model-selector">
-                                <label for="model-selection" class="form-label">Modèle LM Studio</label>
-                                <select class="form-select" id="modelSelect" name="model">
-                                    <option value="" selected>Chargement des modèles...</option>
-                                </select>
-                            </div>
-                            
-                            <button type="submit" class="btn btn-primary w-100" id="generateBtn">
-                                <i class="fas fa-magic me-2"></i>
-                                Générer les cas de test
-                            </button>
-                        </form>
-                    </div>
-                </div>
-                
-                <div class="card mt-3">
-                    <div class="card-header">
-                        <i class="fas fa-cog me-2"></i>
-                        Paramètres
-                    </div>
-                    <div class="card-body">
-                        <button class="btn btn-secondary w-100 mb-2" id="checkStatusBtn">
-                            <i class="fas fa-sync-alt me-2"></i>
-                            Vérifier la connexion
-                        </button>
-                        <button class="btn btn-danger w-100 reset-button" id="resetConnectionBtn">
-                            <i class="fas fa-power-off me-2"></i>
-                            Réinitialiser la connexion
-                        </button>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-md-6">
-                <div class="card" id="resultCard" style="display: none;">
-                    <div class="card-header">
-                        <i class="fas fa-check-circle me-2"></i>
-                        Cas de test générés
-                    </div>
-                    <div class="card-body">
-                        <div class="code-area" id="testCasesOutput"></div>
-                        
-                        <div class="action-buttons">
-                            <button class="btn btn-secondary" id="copyBtn">
-                                <i class="fas fa-copy me-2"></i>
-                                Copier
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="loading" id="loadingIndicator">
-                    <i class="fas fa-spinner fa-spin"></i>
-                    <p>Génération des cas de test en cours...</p>
-                </div>
-                
-                <div id="messageContainer"></div>
-            </div>
-        </div>
-        
-        <div class="debug-info" id="debugInfo" style="display: none;">
-            <h5>Informations de débogage</h5>
-            <pre id="debugContent"></pre>
-        </div>
+  <section id="content" class="ac-content">
+    <h2>Générateur de Tests IA</h2>
+
+    <div id="standalone-mode" class="hidden">
+      <h3>Mode autonome</h3>
+      <textarea id="standalone-story">En tant qu'utilisateur, je souhaite pouvoir me connecter à l'application afin d'accéder à mes données personnelles.</textarea>
     </div>
-    
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const testGenForm = document.getElementById('testGenForm');
-            const loadingIndicator = document.getElementById('loadingIndicator');
-            const resultCard = document.getElementById('resultCard');
-            const testCasesOutput = document.getElementById('testCasesOutput');
-            const copyBtn = document.getElementById('copyBtn');
-            const messageContainer = document.getElementById('messageContainer');
-            const statusIndicator = document.getElementById('statusIndicator');
-            const statusText = document.getElementById('statusText');
-            const generateBtn = document.getElementById('generateBtn');
-            const modelSelect = document.getElementById('modelSelect');
-            const checkStatusBtn = document.getElementById('checkStatusBtn');
-            const resetConnectionBtn = document.getElementById('resetConnectionBtn');
-            const debugInfo = document.getElementById('debugInfo');
-            const debugContent = document.getElementById('debugContent');
-            
-            // Vérifier l'état de la connexion au démarrage
-            checkApiStatus();
-            
-            // Charger les modèles disponibles
-            loadModels();
-            
-            // Gérer le bouton de vérification de status
-            checkStatusBtn.addEventListener('click', function() {
-                checkApiStatus();
-                loadModels();
-            });
-            
-            // Gérer le bouton de réinitialisation de connexion
-            resetConnectionBtn.addEventListener('click', function() {
-                resetConnection();
-            });
-            
-            function checkApiStatus() {
-                statusIndicator.style.display = 'flex';
-                statusText.textContent = 'Vérification de la connexion...';
-                
-                fetch('/api/status')
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.status.includes('disponible')) {
-                            statusIndicator.className = 'status-indicator status-online';
-                            statusText.innerHTML = `<i class="fas fa-check-circle"></i> LM Studio connecté (${data.default_model})`;
-                            generateBtn.disabled = false;
-                        } else {
-                            statusIndicator.className = 'status-indicator status-offline';
-                            statusText.innerHTML = `<i class="fas fa-exclamation-triangle"></i> LM Studio non disponible`;
-                            generateBtn.disabled = true;
-                            showMessage(`L'API LM Studio n'est pas accessible actuellement. Veuillez démarrer LM Studio et vérifier que le serveur API est actif.`, 'error');
-                        }
-                    })
-                    .catch(error => {
-                        statusIndicator.className = 'status-indicator status-offline';
-                        statusText.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Erreur de connexion à l'API`;
-                        generateBtn.disabled = true;
-                        showMessage('Impossible de vérifier l\'état de l\'API', 'error');
-                    });
-            }
-            
-            function loadModels() {
-                fetch('/api/models')
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error(`Erreur HTTP: ${response.status}`);
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        // Vider le sélecteur de modèles
-                        modelSelect.innerHTML = '';
-                        
-                        if (data.data && data.data.length > 0) {
-                            // Parcourir les modèles disponibles
-                            data.data.forEach(model => {
-                                const option = document.createElement('option');
-                                option.value = model.id;
-                                option.textContent = model.id;
-                                
-                                // Sélectionner par défaut le modèle par défaut
-                                if (model.id === data.default_model) {
-                                    option.selected = true;
-                                }
-                                
-                                modelSelect.appendChild(option);
-                            });
-                            
-                            showMessage(`${data.data.length} modèles disponibles`, 'info');
-                        } else {
-                            const option = document.createElement('option');
-                            option.value = "";
-                            option.textContent = "Aucun modèle disponible";
-                            modelSelect.appendChild(option);
-                            
-                            showMessage('Aucun modèle disponible dans LM Studio', 'warning');
-                        }
-                    })
-                    .catch(error => {
-                        const option = document.createElement('option');
-                        option.value = "";
-                        option.textContent = "Erreur de chargement";
-                        modelSelect.innerHTML = '';
-                        modelSelect.appendChild(option);
-                        
-                        console.error('Erreur lors du chargement des modèles:', error);
-                        showMessage('Erreur lors du chargement des modèles', 'error');
-                    });
-            }
-            
-            function resetConnection() {
-                showMessage('Réinitialisation de la connexion à LM Studio...', 'info');
-                
-                fetch('/api/reset_connection', {
-                    method: 'POST'
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status) {
-                        showMessage('Connexion réinitialisée avec succès', 'success');
-                    } else {
-                        showMessage('Échec de la réinitialisation', 'error');
-                    }
-                    
-                    // Actualiser l'état et les modèles
-                    checkApiStatus();
-                    loadModels();
-                })
-                .catch(error => {
-                    showMessage('Erreur lors de la réinitialisation', 'error');
-                    console.error('Erreur:', error);
-                });
-            }
-            
-            // Gérer la soumission du formulaire
-            testGenForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                const userStory = document.getElementById('user_story').value.trim();
-                if (!userStory) {
-                    showMessage('Veuillez saisir une user story.', 'error');
-                    return;
+
+    <div id="story-content" class="hidden">
+      <div class="aui-message aui-message-info">
+        <p class="title"><strong>User story à analyser:</strong></p>
+        <p id="story-text"></p>
+      </div>
+
+      <div class="format-selector">
+        <form class="aui">
+          <div class="radio">
+            <input type="radio" name="format" id="gherkin" value="gherkin" checked />
+            <label for="gherkin">Format Gherkin (Given/When/Then)</label>
+          </div>
+          <div class="radio">
+            <input type="radio" name="format" id="detailed" value="detailed" />
+            <label for="detailed">Format détaillé (Étapes/Résultats attendus)</label>
+          </div>
+        </form>
+      </div>
+
+      <button id="generate-btn" class="aui-button aui-button-primary">Générer les tests</button>
+    </div>
+
+    <div id="loading" class="loading hidden">
+      <div class="spinner"></div>
+      <p>Génération des tests en cours...</p>
+    </div>
+
+    <div id="result-section" class="hidden">
+      <h3>Tests générés:</h3>
+      <div id="test-results" class="test-results"></div>
+      <div style="margin-top: 20px;">
+        <button id="copy-btn" class="aui-button">Copier</button>
+        <button id="insert-btn" class="aui-button aui-button-primary">Ajouter à l'issue/page</button>
+      </div>
+    </div>
+
+    <div id="error-message" class="hidden">
+      <div class="aui-message aui-message-error">
+        <p class="title"><strong>Erreur</strong></p>
+        <p id="error-text"></p>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    let contextData = {};
+    let isStandaloneMode = false;
+
+    function handleAtlassianSDKError() {
+      console.log("SDK Atlassian non disponible - activation du mode autonome");
+      enableStandaloneMode();
+    }
+
+    function enableStandaloneMode() {
+      isStandaloneMode = true;
+      document.getElementById('standalone-mode').classList.remove('hidden');
+      document.getElementById('story-content').classList.remove('hidden');
+      document.getElementById('insert-btn').classList.add('hidden');
+    }
+
+    function initializeAtlassianMode() {
+      try {
+        if (typeof AP !== 'undefined') {
+          AP.context.getContext(function(context) {
+            AP.dialog.getCustomData(function(data) {
+              if (data) {
+                contextData = data;
+                const storyElement = document.getElementById('story-text');
+                if (data.type === 'jira') {
+                  storyElement.textContent = data.summary + "\n\n" + data.description;
+                } else if (data.type === 'confluence') {
+                  const tempDiv = document.createElement('div');
+                  tempDiv.innerHTML = data.pageContent;
+                  storyElement.textContent = data.pageTitle + "\n\n" + tempDiv.textContent;
                 }
-                
-                const formatChoice = document.querySelector('input[name="format"]:checked').value;
-                const languageChoice = document.querySelector('input[name="language"]:checked').value;
-                const modelChoice = modelSelect.value;
-                
-                if (!modelChoice) {
-                    showMessage('Veuillez sélectionner un modèle.', 'error');
-                    return;
-                }
-                
-                // Afficher l'indicateur de chargement
-                loadingIndicator.style.display = 'block';
-                resultCard.style.display = 'none';
-                messageContainer.innerHTML = '';
-                
-                // Créer un contrôleur d'abandon pour le timeout
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minutes de timeout
-                
-                // Envoyer la requête à l'API
-                fetch('/api/generate', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        story: userStory,
-                        format: formatChoice,
-                        language: languageChoice,
-                        model: modelChoice
-                    }),
-                    signal: controller.signal
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`Erreur HTTP: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    // Masquer l'indicateur de chargement
-                    loadingIndicator.style.display = 'none';
-                    
-                    if (data.error) {
-                        showMessage(data.error, 'error');
-                        return;
-                    }
-                    
-                    // Afficher les résultats
-                    testCasesOutput.textContent = data.result;
-                    resultCard.style.display = 'block';
-                    showMessage('Cas de test générés avec succès!', 'success');
-                })
-                .catch(error => {
-                    loadingIndicator.style.display = 'none';
-                    
-                    if (error.name === 'AbortError') {
-                        showMessage('La génération a pris trop de temps. Le serveur est peut-être surchargé, veuillez réessayer.', 'error');
-                    } else if (error.message.includes('Failed to fetch')) {
-                        showMessage('Impossible de se connecter au serveur. Vérifiez votre connexion internet ou réessayez plus tard.', 'error');
-                    } else {
-                        showMessage(`Erreur: ${error.message}`, 'error');
-                    }
-                    
-                    console.error('Erreur:', error);
-                    
-                    // Vérifier l'état de l'API après une erreur
-                    checkApiStatus();
-                })
-                .finally(() => {
-                    clearTimeout(timeoutId);
-                });
+                document.getElementById('story-content').classList.remove('hidden');
+              } else {
+                enableStandaloneMode();
+              }
             });
-            
-            // Copier le contenu dans le presse-papier
-            copyBtn.addEventListener('click', function() {
-                const textToCopy = testCasesOutput.textContent;
-                navigator.clipboard.writeText(textToCopy)
-                    .then(() => {
-                        showMessage('Cas de test copiés!', 'success');
-                    })
-                    .catch(err => {
-                        showMessage('Erreur lors de la copie: ' + err, 'error');
-                    });
-            });
-            
-            // Afficher les informations de débogage
-            document.addEventListener('keydown', function(e) {
-                // Activer le mode debug avec Ctrl+Alt+D
-                if (e.ctrlKey && e.altKey && e.key === 'd') {
-                    fetch('/api/debug')
-                        .then(response => response.json())
-                        .then(data => {
-                            debugContent.textContent = JSON.stringify(data, null, 2);
-                            debugInfo.style.display = 'block';
-                        })
-                        .catch(error => {
-                            console.error('Erreur debug:', error);
-                        });
-                }
-            });
-            
-            // Fonction pour afficher des messages
-            function showMessage(message, type) {
-                const messageClass = type === 'error' ? 'error-message' : 
-                                    type === 'success' ? 'success-message' :
-                                    type === 'warning' ? 'warning-message' : 'info-message';
-                                    
-                messageContainer.innerHTML = `<div class="${messageClass}">
-                    <i class="fas ${type === 'error' ? 'fa-exclamation-circle' : 
-                                    type === 'success' ? 'fa-check-circle' :
-                                    type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'}"></i>
-                    ${message}
-                </div>`;
-                
-                // Scroll jusqu'au message
-                messageContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }
-        });
-    </script>
+          });
+        } else {
+          enableStandaloneMode();
+        }
+      } catch (error) {
+        console.error("Erreur lors de l'initialisation du mode Atlassian:", error);
+        enableStandaloneMode();
+      }
+    }
+
+    function simulateTestGeneration(storyText, format) {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          let result = "";
+          if (format === 'gherkin') {
+            result = `Feature: Connexion\n\nScenario: Connexion réussie\n  Given l'utilisateur est sur la page de connexion\n  When l'utilisateur entre des identifiants valides\n  Then l'utilisateur accède à son tableau de bord`;
+          } else {
+            result = `Test Case 1:\nÉtapes:\n1. Aller sur la page de connexion\n2. Entrer identifiants valides\nRésultat attendu:\n- Connexion réussie`;
+          }
+          resolve(result);
+        }, 1500);
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof AP !== 'undefined') {
+        initializeAtlassianMode();
+      } else {
+        setTimeout(() => {
+          if (typeof AP !== 'undefined') {
+            initializeAtlassianMode();
+          } else {
+            enableStandaloneMode();
+          }
+        }, 1000);
+      }
+
+      document.getElementById('generate-btn').addEventListener('click', async () => {
+        const storyText = isStandaloneMode
+          ? document.getElementById('standalone-story').value
+          : document.getElementById('story-text').textContent;
+        const format = document.querySelector('input[name="format"]:checked').value;
+
+        document.getElementById('story-content').classList.add('hidden');
+        document.getElementById('loading').classList.remove('hidden');
+
+        try {
+          const result = await simulateTestGeneration(storyText, format);
+          document.getElementById('test-results').textContent = result;
+          document.getElementById('result-section').classList.remove('hidden');
+        } catch (err) {
+          document.getElementById('error-message').classList.remove('hidden');
+          document.getElementById('error-text').textContent = "Erreur lors de la génération des tests.";
+        } finally {
+          document.getElementById('loading').classList.add('hidden');
+        }
+      });
+
+      document.getElementById('copy-btn').addEventListener('click', () => {
+        const text = document.getElementById('test-results').textContent;
+        navigator.clipboard.writeText(text).then(() => alert("Tests copiés !"));
+      });
+
+      document.getElementById('insert-btn').addEventListener('click', () => {
+        if (typeof AP !== 'undefined' && contextData.type === 'jira') {
+          AP.request({
+            url: `/rest/api/2/issue/${contextData.key}/comment`,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ body: document.getElementById('test-results').textContent }),
+            success: () => alert("Commentaire ajouté à l'issue !"),
+            error: () => alert("Erreur lors de l'ajout du commentaire.")
+          });
+        }
+      });
+    });
+  </script>
 </body>
 </html>
