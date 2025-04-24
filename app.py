@@ -27,7 +27,7 @@ CORS(app, supports_credentials=True, resources={
 # Constantes
 HTML_INDEX = "index.html"
 CONTENT_TYPE_JSON = "application/json"
-DEFAULT_MODEL = "deepseek-r1-distill-qwen-7b"
+DEFAULT_MODEL = "mistral-7b-instruct-v0.3"
 
 # Configuration des variables d'environnement avec valeurs par défaut
 JIRA_BASE_URL = os.getenv("JIRA_BASE_URL", "")
